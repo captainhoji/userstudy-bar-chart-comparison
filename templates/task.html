@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Task</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="instruction-overlay">
+        <div class="instruction-content">
+            <h2 id="section-title">Instructions: Study Overview</h2>
+            <div id="instruction-text"></div>
+
+        </div>
+    </div>
+    
+    <div id="chart-container" style="display: none;">
+    </div>
+    <div id="feedback-overlay" style="display: none;">
+        <span id="feedback-text"></span>
+    </div>
+    <script>
+        const participantId = "{{ participant_id }}";
+        initializeStudy(participantId);
+    </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <div class="survey-container">
+        <h1>Survey</h1>
+        <p>Please answer the following questions.</p>
+
+        <form id="surveyForm" action="/submit_survey" method="POST">
+            <!-- Hidden field for participant id -->
+            <input type="hidden" name="participant_id" value="{{ participant_id }}">
+
+            <!-- Short Answer Question (Optional) -->
+            <div class="question">
+                <p><strong>1. How often did you encounter data visualizations (e.g., bar charts, line charts, pie charts, etc.) in the past 12 months?</strong> <span class="required">*</span></p>
+                <label><input type="radio" name="q1" value="Never" required> Never</label><br>
+                <label><input type="radio" name="q1" value="A few times a year" required> A few times a year</label><br>
+                <label><input type="radio" name="q1" value="A few times a month" required> A few times a month</label><br>
+                <label><input type="radio" name="q1" value="A few times a week" required> A few times a week</label><br>
+                <label><input type="radio" name="q1" value="Everyday" required> Everyday</label><br>
+                <label><input type="radio" name="q1" value="Many times a day" required> Many times a day</label><br>
+            </div>
+
+            <div class="question">
+                <p><strong>2. How often did you create data visualizations in the past 12 months?</strong> <span class="required">*</span></p>
+                <label><input type="radio" name="q2" value="Never" required> Never</label><br>
+                <label><input type="radio" name="q2" value="A few times a year" required> A few times a year</label><br>
+                <label><input type="radio" name="q2" value="A few times a month" required> A few times a month</label><br>
+                <label><input type="radio" name="q2" value="A few times a week" required> A few times a week</label><br>
+                <label><input type="radio" name="q2" value="Everyday" required> Everyday</label><br>
+                <label><input type="radio" name="q2" value="Many times a day" required> Many times a day</label><br>
+            </div>
+
+            <!-- Continue Button -->
+            <button id="continueBtn" type="submit" disabled>Continue</button>
+
+        </form>
+    </div>
+
+    <script>
+        const participantId = "{{ participant_id }}";
+        localStorage.setItem("participantId", participantId);
+        console.log(`${participantId}: survey started`);
+        // Enable the "Continue" button only when required fields are filled
+        document.getElementById("surveyForm").addEventListener("input", function() {
+            let requiredFields = document.querySelectorAll("input[required]");
+            let allFilled = Array.from(requiredFields).every(input => input.type === "radio" ? 
+                document.querySelector(`input[name="${input.name}"]:checked`) : input.value.trim() !== "");
+            document.getElementById("continueBtn").disabled = !allFilled;
+        });
+    </script>
+
+</body>
+</html>

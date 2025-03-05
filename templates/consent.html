@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Participation Information</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <div class="consent-container">
+        <h1>University of Wisconsin - Madison</h1>
+        <h2>Research Participation Information Sheet</h2>
+        
+        <h3>Study Title: Understanding User Interaction with Data Visualizations</h3>
+        
+        <p><strong>Principal Investigator:</strong> Michael Gleicher</p>
+        <p><strong>Phone:</strong> 608-263-2874</p>
+        <p><strong>Email:</strong> <a href="mailto:GLEICHER@CS.WISC.EDU">GLEICHER@CS.WISC.EDU</a></p>
+
+        <p><strong>Student Researcher:</strong> Jiho Kim</p>
+        <p><strong>Phone:</strong> 608-949-2397</p>
+
+        <hr>
+
+        <p>
+            You are invited to participate in a research study about understanding how people perform tasks using graphs and charts. 
+            You have been asked to participate because you have indicated interest to participate on Prolific.
+        </p>
+
+        <p>
+            The purpose of the research is to understand how different charts affect how people use them do tasks.
+            This study will include participants who are 18 years old or above, speak fluent English, and do not have blindness or low vision conditions.
+        </p>
+
+        <h3>What will you do?</h3>
+        <p>
+            If you decide to participate, you will be asked to look at bar charts and answer questions based on the charts.
+            There will be multiple trials, with each trial lasting a few seconds. 
+            There are a total of four sections, each containing 20 to 25 trials.
+            Finally, you will answer some questions based on your experience.
+            Your participation will last approximately <strong>25 minutes</strong>.
+        </p>
+
+        <h3>Voluntary Participation</h3>
+        <p>
+            You can stop the study at any time. Even if you start the study, you are not required to complete it.
+            All your answers will be confidential and will not be shared outside the research team.
+        </p>
+
+        <h3>Compensation</h3>
+        <p>
+            If you decide to participate in the study, you will receive <strong>$5</strong>.
+            The compensation is based on the Prolific standard rate of $12/hr and the expected duration of 25 minutes.
+            The compensation is $5 even if you complete the study faster or slower.
+        </p>
+
+        <h3>Contact Information</h3>
+        <p>
+            If you have questions about this study, please contact <strong>Jiho Kim</strong> at 
+            <a href="mailto:kim999@wisc.edu">kim999@wisc.edu</a>.
+        </p>
+        <div class="consent-checkbox">
+            <input type="checkbox" id="consentCheck">
+            <label for="consentCheck">By checking this box, I consent to participate in the study.</label>
+        </div>
+
+        <button id="continueBtn" disabled>Continue</button>
+    </div>
+
+</body>
+<script>
+    document.getElementById("consentCheck").addEventListener("change", function() {
+        document.getElementById("continueBtn").disabled = !this.checked;
+    });
+
+    document.getElementById("continueBtn").addEventListener("click", function() {
+        window.location.href = "/verification";
+    });
+</script>
+</html>

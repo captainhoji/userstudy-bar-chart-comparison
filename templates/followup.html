@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-study questions</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <div class="survey-container">
+        <h1>Post-study questions</h1>
+        <p>This is the last section of the study. Please answer the following questions.</p>
+
+        <form id="surveyForm" action="/submit_followup" method="POST">
+            <!-- Hidden field for participant id -->
+            <input type="hidden" name="participant_id" value="{{ participant_id }}">
+
+            <!-- Multiple Choice Question (Required) -->
+            <!-- <div class="question">
+                <p><strong>1. Please explain your strategy for carrying out the task.</strong> <span class="required">*</span></p>
+                <textarea name="q1" rows="5" cols="80" required></textarea>
+            </div>
+ -->
+            <div class="question">
+                <p><strong>1. How did your strategy differ based on whether the layout was horizontal or vertical?</strong> <span class="required">*</span></p>
+                <textarea name="q1" rows="5" cols="80" required></textarea>
+            </div>
+
+            <!-- Short Answer Question (Required) -->
+            <div class="question">
+                <p><strong>2. Which layout felt more difficult for you to carry out the task?</strong> <span class="required">*</span></p>
+                <textarea name="q2" rows="5" cols="80" required></textarea>
+            </div>
+
+            <!-- Multiple Choice Question (Optional) -->
+            <div class="question">
+                <p><strong>3. How did your strategy differ based on whether there were labels or not?</strong> <span class="required">*</span></p>
+                <textarea name="q3" rows="5" cols="80" required></textarea>
+            </div>
+
+            <!-- Short Answer Question (Optional) -->
+            <div class="question">
+                <p><strong>4. Did having labels on the charts make the task any easier or harder? </strong> <span class="required">*</span></p>
+                <textarea name="q4" rows="5" cols="80" required></textarea>
+            </div>
+
+            <div class="question">
+                <p><strong>5. Is there anything else that you want to share? </strong></p>
+                <textarea name="q5" rows="5" cols="80"></textarea>
+            </div>
+
+            <!-- Continue Button -->
+            <button id="continueBtn" type="submit" disabled>Continue</button>
+
+        </form>
+    </div>
+
+    <script>
+        const participantId = "{{ participant_id }}";
+
+        // Enable the "Continue" button only when required fields are filled
+        document.getElementById("surveyForm").addEventListener("input", function() {
+            let requiredFields = document.querySelectorAll("textarea[required]");
+            let allFilled = Array.from(requiredFields).every(textarea => textarea.value.trim() !== "");
+            document.getElementById("continueBtn").disabled = !allFilled;
+        });
+    </script>
+
+</body>
+</html>

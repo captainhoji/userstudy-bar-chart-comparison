@@ -1,0 +1,38 @@
+# Add more columns
+ALTER TABLE Trial
+ADD 
+    [order] INT NOT NULL DEFAULT 0,         -- Default order value
+    orientation BIT NOT NULL DEFAULT 0,     -- 0 = Horizontal, 1 = Vertical
+    label BIT NOT NULL DEFAULT 0,           -- 0 = No label, 1 = Label
+    task BIT NOT NULL DEFAULT 0             -- 0 = Compare Bar Height, 1 = Compare Index
+
+# Delete all rows (while preserving columns) and reset id counter
+DELETE FROM Trial;
+DBCC CHECKIDENT ('Trial', RESEED, 0);
+
+
+CREATE TABLE Participant (
+    id INT IDENTITY(1,1) PRIMARY KEY,  -- Auto-incrementing unique ID
+    participant_id NVARCHAR(50) NOT NULL UNIQUE,  -- Participant ID (unique constraint)
+    age INT,  -- Age of participant
+    gender NVARCHAR(10),  -- Gender of participant (e.g., Male, Female, Non-binary)
+    registration_date DATETIME DEFAULT GETDATE(),  -- Registration timestamp (default to current time)
+    task BIT NOT NULL DEFAULT 0 -- Task type
+);
+
+
+
+cat /var/log/apache2/error.log
+
+
+sudo docker stop userstudy-container
+sudo docker rm userstudy-container
+sudo docker build --no-cache -t userstudy-app .
+sudo docker run -d -p 8080:80 --name userstudy-container userstudy-app
+sudo docker ps
+
+sudo docker stop userstudy-container
+sudo docker rm userstudy-container
+sudo docker build -t userstudy-app .
+sudo docker run -d -p 8080:80 --name userstudy-container userstudy-app
+sudo docker ps
