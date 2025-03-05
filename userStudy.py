@@ -3,14 +3,18 @@ import random
 import json
 import pyodbc, struct
 import pickle
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
 
 # Azure SQL Database connection details
-server = 'tcp:vis-research-server.database.windows.net,1433'
-database = 'JuxtapositionProlificStudy'
-username = 'captainhoji'
-password = '2781149Kim!'
+server = os.getenv('DATABASE_URL')
+database = os.getenv('DATABASE_NAME')
+username = os.getenv('DATABASE_USERNAME')
+password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
 stimuliDir = 'stimuli'
