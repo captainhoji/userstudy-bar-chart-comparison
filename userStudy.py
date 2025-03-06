@@ -5,10 +5,16 @@ import pyodbc, struct
 import pickle
 from dotenv import load_dotenv
 import os
+import logging
+import sys
+
 
 load_dotenv()
 
 app = Flask(__name__)
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+app.logger.setLevel(logging.DEBUG)
 
 # Azure SQL Database connection details
 server = os.getenv('DATABASE_URL')
@@ -174,24 +180,24 @@ def initializeTask():
         global participantCounter
 
         # Assigning conditions
-        # if participantCounter % 2 == 0:
-        #     task = "compare_highest"
-        # else:
-        #     task = "compare_index"
+        if participantCounter % 2 == 0:
+            task = "compare_highest"
+        else:
+            task = "compare_index"
 
-        # label_idx = (participantCounter//2)%2
-        # orientation_idx = (participantCounter//4)%2
+        label_idx = (participantCounter//2)%2
+        orientation_idx = (participantCounter//4)%2
 
         # Assigning conditions constrained
-        task = "compare_index"
-        if random.random() < 0.5:
-            label_idx = 0
-        else:
-            label_idx = 1             
-        if random.random() < 0.5:
-            orientation_idx = 0
-        else:
-            orientation_idx = 1
+        # task = "compare_index"
+        # if random.random() < 0.5:
+        #     label_idx = 0
+        # else:
+        #     label_idx = 1             
+        # if random.random() < 0.5:
+        #     orientation_idx = 0
+        # else:
+        #     orientation_idx = 1
 
         label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
         orientation = [orientation[i] for i in [orientation_idx, 1-orientation_idx, orientation_idx, 1-orientation_idx]]
@@ -219,6 +225,7 @@ def initializeTask():
         '''
         Add validation stimuli
         '''
+        '''
         validation_per_block = 5
 
         if task == "compare_highest":
@@ -235,6 +242,7 @@ def initializeTask():
                 stimuliblocks[i].insert(pos, validation_checks[j])
                 stimulinumbers[i].insert(pos, 999) #999 is the code for validation check stimuli
                 j += 1
+        '''
         '''
         Add easy practice stimuli
         '''

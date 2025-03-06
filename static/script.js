@@ -34,22 +34,11 @@ async function initializeStudy(participantId) {
     const data = await response.json();
     cachedData = data;
 
-    // conditions = {
-    //         "task": task,
-    //         "label": label,
-    //         "orientation": orientation,
-    //         "whatToAlterFirst": whatToAlterFirst,
-    //         "stimuli": stimuliblocks,
-    //         "practice": practiceblocks,
-    //         "numbers": stimulinumbers
-    // }    
-    // task = "compare_highest"
     task = data.task;
     label = data.label;
     orientation = data.orientation;
     whatToAlterFirst = data.whatToAlterFirst;
     stimuli = data.stimuli;
-    // practices = data.practice;
     practices_easy = data.practice_easy;
     numbers = data.numbers
 
@@ -65,17 +54,17 @@ async function initializeStudy(participantId) {
 
 
     instructionText = `<p>This experiment consists of 4 sections.<br>
-        Each section will include a few practice trials followed by 25 real trials.<br><br>
-        On each trial, you will be presented with <strong>two bar charts and you will be asked to `
+        Each section will include a few practice trials followed by 20 real trials.<br><br>
+        On each trial, you will be presented with two bar charts and you will be asked to <strong>`
 
     if (task == "compare_highest") {
         instructionText += 'find the bar chart that has the highest bar</strong>.'
     } else if (task == "compare_index") {
-        instructionText += 'find the bar chart whose highest bar is positioned farther to the right</strong>.'
+        instructionText += 'find the highest bar from each chart, and report which one is closer to the right side of its chart</strong>.'
     }
 
-    instructionText += '<br><br>Your task will be the same task for all 4 sections of the experiment, but the charts and response buttons will be different.'
-    instructionText += '<br><br>Please press the spacebar to move on to the instructions for the first section.</p>'
+    instructionText += '<br><br>Your task will be the same for all 4 sections of the experiment, but the charts and response buttons will be different.'
+    instructionText += '<br><br>Please press the spacebar to see the instructions for section 1.</p>'
 
     document.getElementById("instruction-text").innerHTML = instructionText;
 
@@ -120,7 +109,6 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
                     two charts arranged one above the other. `;
             }
             instructionText += `Your task is to find the highest bar from each chart, and report which one is closer to the right side of its chart. `
-                    //`Your task is to <strong>report which chart has its highest bar positioned farther to the right</strong>. `;
         }
 
         if (currentLayout === 'horizontal') {
@@ -133,8 +121,7 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
         if (task === "compare_highest") {
             if (currentLayout === "horizontal") {
                 instructionText += `In the example below, the highest bar is located in the chart on the RIGHT, 
-                so you would press the RIGHT ARROW KEY. `
-                // If the highest bar was on the LEFT, you would press the LEFT ARROW KEY.`;
+                so you would press the RIGHT ARROW KEY. `;
                 if (!currentLabel) {
                     instructionText += `<img src="static/img/compare_height_horizontal_unlabeled.png" width="400px">`
                 } else {
@@ -142,8 +129,7 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
                 }
             } else {
                 instructionText += `In the example below, the highest bar is located in the chart at the BOTTOM, 
-                so you would press the DOWN ARROW KEY. `
-                // If the highest bar was on the TOP, you would press the UP ARROW KEY.`;
+                so you would press the DOWN ARROW KEY. `;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_height_vertical_unlabeled.png" height="400px">'
                 } else {
@@ -152,27 +138,16 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
             }
         } else {
             if (currentLayout === "horizontal") {
-                /* instructionText += `In the example below, the highest bar of the LEFT chart is positioned farther to the right  
-                than the highest bar of the RIGHT chart, so you would press the LEFT ARROW KEY. 
-                If the highest bar of the RIGHT chart was farther to the right than the highest bar of the LEFT chart, 
-                then you would press the RIGHT ARROW KEY.`; */
                 instructionText += `In the example below, the highest bar of the LEFT chart is closer to the right side of its chart than
-                    the highest bar of the RIGHT chart is. So, you would press the <b>LEFT</b> ARROW KEY. <b>(The fact that the RIGHT chart has the higher bar does not matter.)</b> `
-                    // If the highest bar of the RIGHT chart was closer to the right side of its chart than the highest bar of the LEFT chart is, 
-                    // then you would press the RIGHT ARROW KEY. `;
+                    the highest bar of the RIGHT chart is. So, you would press the <b>LEFT</b> ARROW KEY. <b>(The fact that the RIGHT chart has the higher bar does not matter.)</b> `;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_index_horizontal_unlabeled.png" width="400px">'
                 } else {
                     instructionText += '<img src="static/img/compare_index_horizontal_labeled.png" height="400px">'
                 }
             } else {
-                /* instructionText += `In the example below, the highest bar of the TOP chart is positioned farther to the right  
-                than the highest bar of the BOTTOM chart, so you would press the UP ARROW KEY. 
-                If the highest bar of the BOTTOM chart was farther to the right than the highest bar of the TOP chart, 
-                then you would press the DOWN ARROW KEY.`; */
                 instructionText += `In the example below, the highest bar of the TOP chart is closer to the right side of its chart than
                     the highest bar of the BOTTOM chart is. So, you would press the <b>UP</b> ARROW KEY. <b>(The fact that the BOTTOM chart has the higher bar does not matter.)</b> `;
-                    // `If the highest bar of the BOTTOM chart was closer to the right side of its chart than the highest bar of the TOP chart is, then you would press the DOWN ARROW KEY.`;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_index_vertical_unlabeled.png" height="400px">'
                 } else {
@@ -183,34 +158,37 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
 
         instructionText += 'Please indicate your answer as ACCURATELY and as QUICKLY as possible. <br/><br/>'
 
-        instructionText += `You will be asked to complete a few basic practice trials to get familiar with the task.
+        instructionText += `You will be asked to complete basic practice trials to get familiar with the task.
+            <br>You will need to get <b>five correct trials in a row</b> to proceed.
             <br>Please make sure you understand the instructions before continuing!
             <br>Please press the spacebar to start the practice trials.</p>`;
     // actual task instructions
     } else if (practice) {
-        titleContainer.textContent = `Section ${blockCounter+1} of 4: Practice Trials`
+        titleContainer.textContent = `Section ${blockCounter+1} of 4: Practice Trials`;
 
-        instructionText += `Now you will complete 8 more practice trials. These 8 practice trials will be similar to the real trials.`
-        instructionText += '<br>You have to get at least <b>7 out of 8 correct</b> to move on to the real trials.'
+        instructionText += `Now you will complete 8 harder practice trials which closely resemble the real trials.`;
+        // instructionText += '<br>You have to get at least <b>7 out of 8 correct</b> to move on to the real trials.'
         if (task === "compare_highest") {
-            instructionText += '<br><br> Again, your task is to report which chart has the highest bar. '
+            instructionText += '<br><br> Again, your task is to report which chart has the highest bar. ';
         } else {
-            instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. "
+            instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. ";
         }
-        instructionText += '<br/><br/> Again, indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>'
-        instructionText += `</p><h3>Press the spacebar to start the 8 practice trials.</h3>`
+        instructionText += '<br/><br/> Please indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>';
+        instructionText += `</p><h3>Press the spacebar to start the 8 practice trials.</h3>`;
     } else {
-        titleContainer.textContent = `Section ${blockCounter+1} of 4: Real Trials`
+        titleContainer.textContent = `Section ${blockCounter+1} of 4: Real Trials`;
 
-        instructionText += `Now you will complete the real trials. There are 25 real trials.`
+        instructionText += `You got ${practiceCorrects} out of ${blockLength} correct.`;
+        instructionText += `<br><br>Please remember that <b>accuracy</b> is just as important as speed!`;
+        instructionText += `<br><br>Now you will complete the real trials. There are 20 real trials.`;
 
-        if (task === "compare_highest") {
-            instructionText += '<br><br> Again, your task is to report which chart has the highest bar. '
-        } else {
-            instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. "
-        }
-        instructionText += '<br/><br/> Again, indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>'
-        instructionText += `</p><h3>Press the spacebar to start the real trials.</h3>`
+        // if (task === "compare_highest") {
+        //     instructionText += '<br><br> Again, your task is to report which chart has the highest bar. '
+        // } else {
+        //     instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. "
+        // }
+        // instructionText += '<br/><br/> Again, indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>'
+        instructionText += `</p><h3>Press the spacebar to start the real trials.</h3>`;
     }
 
     document.getElementById("instruction-text").innerHTML = instructionText;
@@ -505,17 +483,15 @@ async function saveResponse(participantId, response) {
         const incorrectDirection = currentLayout === "horizontal" ? (answer === 1 ? "right" : "left") : (answer === 1 ? "bottom" : "top");
         if (task === "compare_highest") {
             updateBarColor(answer, answer == 1 ? maxIndex1 : maxIndex2, "green");
-            explanation += `Chart ${answer} has the highest bar. Therefore, the answer is the ${correctDirection} chart.`; 
+            explanation += `The answer is the ${correctDirection} chart because it has the highest bar. `; 
             // color the highest bar
         } else {
             updateBarColor(answer, answer == 1 ? maxIndex1 : maxIndex2, "green");
             updateBarColor(3-answer, answer == 1 ? maxIndex2 : maxIndex1, "grey");
-            // explanation += `The ${direction1} chart has its highest bar at position ${maxIndex1+1}. `;
-            // explanation += `The ${direction2} chart has its highest bar at position ${maxIndex2+1}. `;
-            explanation += `Notice how the green bar is closer to the right side of its chart than the grey bar is to the right side of its chart. Therefore, the answer is the ${correctDirection} chart. `
+            explanation += `The answer is the <b>${correctDirection}</b> chart because the green bar is closer to the right side of its chart than is the grey bar. `
             // `Because ${answer == 1 ? maxIndex1+1 : maxIndex2+1} is bigger than ${answer == 1 ? maxIndex2+1 : maxIndex1+1}, the answer is the ${correctDirection} chart. `;
             if (trialCounter % 3 == 2) {
-                explanation += `<b>(The fact that the ${incorrectDirection} chart has the highest bar does not matter.)</b>`
+                explanation += `<br><b>(The fact that the ${incorrectDirection} chart has the highest bar does not matter.)</b>`
             }
         }
         explanation += '<br>Please press the spacebar for the next trial.';
@@ -585,7 +561,7 @@ function handleNextTrialLoad() {
 // Hide after 500ms and load next trial
     setTimeout(() => {
         if (isEasyPractice) {
-            if (consecutivePracticeCorrects >= 3 || trialCounter >= practices_easy.length) {
+            if (consecutivePracticeCorrects >= 5 || trialCounter >= practices_easy.length) {
                 isEasyPractice = false;
                 if (trialCounter >= practices_easy.length) {
                     if (!participantId) {
@@ -620,7 +596,8 @@ function handleNextTrialLoad() {
                         if (!participantId) {
                             participantId = localStorage.getItem("participantId");
                         }
-                        window.location.href = `/follow_up?participant_id=${participantId}`;
+                        // window.location.href = `/follow_up?participant_id=${participantId}`;
+                        window.location.href = `/thank_you`;
                     } else {
                         loadInstructions(blockCounter, practice=true, easyPractice=true)
                     }                
@@ -636,13 +613,16 @@ function showPracticeResults() {
     feedbackOverlay.style.color = "black";
 
     let feedbackText = `You got ${practiceCorrects} out of ${blockLength} correct.`
-    if (practiceCorrects >= 7) {
-        feedbackText += '<br><br> Good job! Keep up the good work!'
-        feedbackText += '<br> Please press the spacebar to start the real trials.'
-        document.addEventListener("keydown", handleSpacePress(() => {
-            document.getElementById('feedback-overlay').style.display = "none";
-            loadInstructions(blockCounter, false);
-        }));
+    if (practiceCorrects >= 0) {
+        // feedbackText += '<br><br> Good job! Keep up the good work!'
+        // feedbackText += '<br> ';
+        // feedbackText += '<br><br> Please press the spacebar to continue.';
+        // document.addEventListener("keydown", handleSpacePress(() => {
+        //     document.getElementById('feedback-overlay').style.display = "none";
+        //     loadInstructions(blockCounter, false);
+        // }));
+        document.getElementById('feedback-overlay').style.display = "none";
+        loadInstructions(blockCounter, false)
     } else {
         feedbackText += '<br><br> You have to get at least 7 out of 8 correct to move on to the real trials. ' 
         if (task === "compare_highest") {
