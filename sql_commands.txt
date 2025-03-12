@@ -34,5 +34,5 @@ sudo docker ps
 sudo docker stop userstudy-container
 sudo docker rm userstudy-container
 sudo docker build -t userstudy-app .
-sudo docker run -d -p 8080:80 --name userstudy-container userstudy-app
+sudo docker run --env-file .env -d -p 8080:80 --name userstudy-container userstudy-app
 sudo docker ps
