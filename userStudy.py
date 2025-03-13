@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
+import numpy as np
 import random
 import json
 import pyodbc, struct
@@ -22,7 +23,7 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli'
+stimuliDir = 'stimuli_red'
 
 participantCounter = 0
 
@@ -32,17 +33,15 @@ with open(stimuliDir + '/stimuli.pickle', 'rb') as file:
 with open(stimuliDir + '/practice.pickle', 'rb') as file:
     practice = pickle.load(file)
 
-with open(stimuliDir + '/validation_stimuli_compare_height.pickle', 'rb') as file:
-    validation_stimuli_compare_height = pickle.load(file)
+with open(stimuliDir + '/stimuli_easy.pickle', 'rb') as file:
+    practice_easy = pickle.load(file)  
 
-with open(stimuliDir + '/validation_stimuli_compare_index.pickle', 'rb') as file:
-    validation_stimuli_compare_index = pickle.load(file)
+# with open(stimuliDir + '/validation_stimuli_compare_height.pickle', 'rb') as file:
+#     validation_stimuli_compare_height = pickle.load(file)  
 
-with open(stimuliDir + '/practice_stimuli_compare_height.pickle', 'rb') as file:
-    practice_stimuli_compare_height = pickle.load(file)
+# with open(stimuliDir + '/validation_stimuli_compare_index.pickle', 'rb') as file:
+#     validation_stimuli_compare_index = pickle.load(file)  
 
-with open(stimuliDir + '/practice_stimuli_compare_index.pickle', 'rb') as file:
-    practice_stimuli_compare_index = pickle.load(file)    
 
 # Function to establish database connection
 def get_db_connection():
@@ -59,7 +58,7 @@ def get_db_connection():
 def instructions():
     return render_template('consent.html')
 
-# Instructions page
+# Verification page
 @app.route('/verification')
 def verificaiton():
     return render_template('verification.html')
@@ -149,7 +148,7 @@ def followup():
 @app.route("/submit_followup", methods=["POST"])
 def submit_followup():
     participant_id = request.form.get("participant_id")
-    responses = tuple([participant_id] +  ["no answer"] + [request.form.get(f'q{i}') or "no answer" for i in range(1, 6)])
+    responses = tuple([participant_id] + [request.form.get(f'q{i}') or "0" for i in range(1, 5)])
 
     # Process and store the responses (add your database logic here)
     print("Survey Responses:", *responses)  # Example log
@@ -157,13 +156,13 @@ def submit_followup():
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Followup (participant_id, q1, q2, q3, q4, q5, q6) VALUES (?,?,?,?,?,?,?)", responses)
+        cursor.execute("INSERT INTO Followup_red (participant_id, q1, q2, q3, q4) VALUES (?,?,?,?,?)", responses)
         conn.commit()
         conn.close()
     else:
         print('db connection error in submit_survey')
 
-    return render_template("thank_you.html")  # Redirect to the task page
+    return redirect(url_for('thank_you'))
 
 # Task page for trials
 @app.route('/initialize_task', methods=['POST'])
@@ -174,96 +173,90 @@ def initializeTask():
     if data['message'] == 'initialize':
 
         label = [False, True]
-        orientation = ['horizontal', 'vertical']
-        whatToAlterFirst = 'orientation'
+        layout = ['horizontal', 'vertical']
         global participantCounter
 
         # Assigning conditions
-        # if participantCounter % 2 == 0:
-        #     task = "compare_highest"
-        # else:
-        #     task = "compare_index"
-
-        # label_idx = (participantCounter//2)%2
-        # orientation_idx = (participantCounter//4)%2
-
-        # Assigning conditions constrained
-        if participantCounter % 5 == 0:
-            task = "compare_highest"
-            label_idx = 0
-            orientation_idx = 1
-        elif participantCounter % 5 < 4:
-            task = "compare_index"
-            label_idx = 1
-            orientation_idx = 0
+        if participantCounter % 2 == 0:
+            task = "compare_height"
         else:
             task = "compare_index"
-            label_idx = 0
-            orientation_idx = 1
 
+        label_idx = (participantCounter//2)%2
+        layout_idx = (participantCounter//4)%2
 
         label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
-        orientation = [orientation[i] for i in [orientation_idx, 1-orientation_idx, orientation_idx, 1-orientation_idx]]
+        layout = [layout[i] for i in [layout_idx, 1-layout_idx, layout_idx, 1-layout_idx]]
 
         participantCounter += 1
 
         '''
         Add stimuli
         '''
-        stimuli_per_block = 20
-        stimuli_copy = list(zip(stimuli[:], range(len(stimuli))))
-        random.shuffle(stimuli_copy)
-        stimuli_shuffled, indexes_shuffled = map(list, zip(*stimuli_copy))
+        indexes_shuffled = []
+        difficulty_levels = 3
+        stimuli_per_block = 27
 
+        arr = np.arange(stimuli_per_block*4)
+        split_arrays = np.split(arr, difficulty_levels ** 2)
+        for subarray in split_arrays:
+            np.random.shuffle(subarray)
+            indexes_shuffled.append(np.split(subarray, 4))
+        indexes_shuffled = [np.concatenate(group) for group in zip(*indexes_shuffled)]
+        for indexes_in_condition in indexes_shuffled:
+            np.random.shuffle(indexes_in_condition)
+
+        indexes_shuffled = [obj.tolist() for obj in indexes_shuffled]
+        stimuli_copy = [[stimuli[i] for i in sublist] for sublist in indexes_shuffled]
+
+
+        # Add engagement checks
+        # if task == "compare_height":
+        #     validation_stimuli = validation_stimuli_compare_height
+        # else:
+        #     validation_stimuli = validation_stimuli_compare_index
+
+        # j = 0
+        # random.shuffle(validation_stimuli)
+        # for i in range(len(validation_stimuli)):
+        #     indexes_shuffled[i//5].insert((i%5)*5 + 4, validation_stimuli[i])
+        # validation_indexes = [5*i + 4 for i in range(5)]
+        # for v_index in validation_indexes:
+        #     for i, subgroup in enumerate(indexes_shuffled):
+        #         subgroup.insert(v_index, 999)
+        #         stimuli_copy[i].insert(v_index, validation_stimuli[j])
+        #         j += 1
+
+        
         # swap the answer position with 50% chance
-        for i, s in enumerate(stimuli_shuffled):
-            if random.random() < 0.5:
-                s[0], s[1] = s[1], s[0]
-                s[2] = 3-s[2]
-                s[3] = 3-s[3]
-                indexes_shuffled[i] *= -1
-        stimuliblocks = [stimuli_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
-        stimulinumbers = [indexes_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
+        for i in range(4):
+            for j, s in enumerate(stimuli_copy[i]):
+                if random.random() < 0.5:
+                    s[0], s[1] = s[1], s[0]
+                    s[2] = 3-s[2]
+                    s[3] = 3-s[3]
+                    s[4][0], s[4][1] = s[4][1], s[4][0]
+                    indexes_shuffled[i][j] *= -1
 
-        '''
-        Add validation stimuli
-        '''
-        '''
-        validation_per_block = 5
-
-        if task == "compare_highest":
-            validation_checks = validation_stimuli_compare_height
-        elif task == "compare_index":
-            validation_checks = validation_stimuli_compare_index
-
-        random.shuffle(validation_checks)
-        j = 0 # validation stimuli counter
-        for i in range(len(stimuliblocks)):
-            validation_check_indexes = random.sample(range(1, stimuli_per_block+validation_per_block), validation_per_block)
-            validation_check_indexes.sort()
-            for pos in validation_check_indexes:
-                stimuliblocks[i].insert(pos, validation_checks[j])
-                stimulinumbers[i].insert(pos, 999) #999 is the code for validation check stimuli
-                j += 1
-        '''
         '''
         Add easy practice stimuli
         '''
-        if task == "compare_highest":
-            practice_easy = practice_stimuli_compare_height
-        elif task == "compare_index":
-            practice_easy = practice_stimuli_compare_index
-        random.shuffle(practice_easy)
-
+        for i, s in enumerate(practice_easy):
+            if random.random() < 0.5:
+                # print("before: ", practice_easy[i])
+                s[0], s[1] = s[1], s[0]
+                s[4][0], s[4][1] = s[4][1], s[4][0] # swapping the red bar index as well
+                s[2] = 3-s[2]
+                s[3] = 3-s[3]
+                # print("after: ", practice_easy[i])
+            # print(f"{i}:, {practice_easy[i]}")
         conditions = {
             "task": task,
             "label": label,
-            "orientation": orientation,
-            "whatToAlterFirst": whatToAlterFirst,
-            "stimuli": stimuliblocks,
-            # "practice": practiceblocks,
+            "layout": layout,
+            "stimuli": stimuli_copy,
             "practice_easy": practice_easy,
-            "numbers": stimulinumbers
+            "numbers": indexes_shuffled
         }
         return jsonify(conditions)
 
@@ -279,6 +272,7 @@ def getPracticeBlock():
             p[0], p[1] = p[1], p[0]
             p[2] = 3-p[2]
             p[3] = 3-p[3]
+            p[4][0], p[4][1] = p[4][1], p[4][0]
     return jsonify({"practice": practiceBlock})
 
 # Save response to database
@@ -302,27 +296,25 @@ def save_response():
     correct = data['correct']
     trial_number = data['order']
     time_when = data['time_when']
-    orientation = data['orientation']
+    layout = data['layout']
     label = data['label']
-    stimuli_data = data['stimuli']
     duration = data['duration']
     stimuli_number = data['number']
 
-    stimuli_str = " ".join(str(x) for x in stimuli_data[0]) + "," + " ".join(str(x) for x in stimuli_data[1])
-    if task == "compare_highest":
+    if task == "compare_height":
         task = 0
     else:
         task = 1
-    if orientation == "horizontal":
-        orientation = 0
+    if layout == "horizontal":
+        layout = 0
     else:
-        orientation = 1
+        layout = 1
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Trial (participant_id, task, stimuli_data, stimuli_number, trial_number, orientation, label, correct, response, duration, time_when) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                       (participant_id, task, stimuli_str, stimuli_number, trial_number, orientation, label, correct, response, duration, time_when))
+        cursor.execute("INSERT INTO Trial_red_new (participant_id, task, stimuli_number, trial_number, layout, label, correct, response, duration, time_when) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                       (participant_id, task, stimuli_number, trial_number, layout, label, correct, response, duration, time_when))
         conn.commit()
         conn.close()
         print(f'participant {participant_id} trial {trial_number} data saved.')
@@ -337,7 +329,7 @@ def save_practiceFail():
     orientation = data['orientation']
     label = data['label']
     task = data['task']
-    if task == "compare_highest":
+    if task == "compare_height":
         task = 0
     else:
         task = 1

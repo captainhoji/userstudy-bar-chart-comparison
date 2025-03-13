@@ -36,8 +36,7 @@ async function initializeStudy(participantId) {
 
     task = data.task;
     label = data.label;
-    orientation = data.orientation;
-    whatToAlterFirst = data.whatToAlterFirst;
+    orientation = data.layout;
     stimuli = data.stimuli;
     practices_easy = data.practice_easy;
     numbers = data.numbers
@@ -47,31 +46,25 @@ async function initializeStudy(participantId) {
     console.log("task: ", task)    
     console.log("label: ", label)
     console.log("orientation: ", orientation)
-    console.log("whatToAlterFirst: ", whatToAlterFirst)
     console.log("stimuli: ", stimuli)
-    // console.log("practices: ", practices)
     console.log("numbers: ", numbers)
 
 
     instructionText = `<p>This experiment consists of 4 sections.<br>
-        Each section will include a few practice trials followed by 20 real trials.<br><br>
-        On each trial, you will be presented with two bar charts and you will be asked to <strong>`
+        Each section will include a few practice trials followed by around 30 real trials.<br><br>
+        On each trial, you will be presented with two bar charts. Each bar chart will have one red bar. You will be asked to <strong>`
 
-    if (task == "compare_highest") {
-        instructionText += 'find the bar chart that has the highest bar</strong>.'
+    if (task == "compare_height") {
+        instructionText += 'identify which red bar is taller</strong>.'
     } else if (task == "compare_index") {
-        instructionText += 'find the highest bar from each chart, and report which one is closer to the right side of its chart</strong>.'
+        instructionText += 'identify which red bar is positioned farther to the right</strong>.'
     }
 
-    instructionText += '<br><br>Your task will be the same for all 4 sections of the experiment, but the charts and response buttons will be different.'
     instructionText += '<br><br>Please press the spacebar to see the instructions for section 1.</p>'
 
     document.getElementById("instruction-text").innerHTML = instructionText;
 
     document.addEventListener("keydown", handleSpacePress(() => loadInstructions(blockCounter, practice=true, easyPractice=true)));
-
-    // loadInstructions(blockCounter, practice=true, easyPractice=true);
-    // loadTrial(participantId)
 }
 
 function loadInstructions(blockCounter, practice=true, easyPractice=false) {
@@ -90,25 +83,24 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
     // practice task instructions
     if (easyPractice) {
         titleContainer.textContent = `Section ${blockCounter+1} of 4: Instructions`
-        if (task === "compare_highest") {
+        if (task === "compare_height") {
             if (currentLayout === 'horizontal') {
                 instructionText += `In this section of the experiment you will be presented with 
-                    two charts side by side. 
-                    Your task is to <strong>report which chart has the highest bar</strong>. `;
+                    two bar charts side by side. Each chart have one red bar.`;
             } else {
                 instructionText += `In this section of the experiment you will be presented with 
-                    two charts arranged one above the other. 
-                    Your task is to <strong>report which chart has the highest bar</strong>. `;
+                    two bar charts arranged one above the other. `;
             }
+            instructionText += `Your task is to <strong>identify which red bar is taller</strong>. `;
         } else if (task === "compare_index") {
             if (currentLayout === 'horizontal') {
                 instructionText += `In this section of the experiment you will be presented with 
-                    two charts side by side. `;
+                    two bar charts side by side. `;
             } else {
                 instructionText += `In this section of the experiment you will be presented with 
-                    two charts arranged one above the other. `;
+                    two bar charts arranged one above the other. `;
             }
-            instructionText += `Your task is to find the highest bar from each chart, and report which one is closer to the right side of its chart. `
+            instructionText += `Your task is to <strong>identify which red bar is positioned farther to the right</strong>. `
         }
 
         if (currentLayout === 'horizontal') {
@@ -118,9 +110,9 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
         }
         instructionText += "<br><br>";
 
-        if (task === "compare_highest") {
+        if (task === "compare_height") {
             if (currentLayout === "horizontal") {
-                instructionText += `In the example below, the highest bar is located in the chart on the RIGHT, 
+                instructionText += `In the example below, the red bar of the RIGHT chart is taller, 
                 so you would press the RIGHT ARROW KEY. `;
                 if (!currentLabel) {
                     instructionText += `<img src="static/img/compare_height_horizontal_unlabeled.png" width="400px">`
@@ -128,7 +120,7 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
                     instructionText += '<img src="static/img/compare_height_horizontal_labeled.png" width="400px">'
                 }
             } else {
-                instructionText += `In the example below, the highest bar is located in the chart at the BOTTOM, 
+                instructionText += `In the example below, the red bar of the BOTTOM chart is taller, 
                 so you would press the DOWN ARROW KEY. `;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_height_vertical_unlabeled.png" height="400px">'
@@ -138,16 +130,14 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
             }
         } else {
             if (currentLayout === "horizontal") {
-                instructionText += `In the example below, the highest bar of the LEFT chart is closer to the right side of its chart than
-                    the highest bar of the RIGHT chart is. So, you would press the <b>LEFT</b> ARROW KEY. <b>(The fact that the RIGHT chart has the higher bar does not matter.)</b> `;
+                instructionText += `In the example below, the red bar on the LEFT is positioned farther to the right within its chart. So, you would press the <b>LEFT</b> ARROW KEY. <b>(The heights of red bars do not matter.)</b> `;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_index_horizontal_unlabeled.png" width="400px">'
                 } else {
                     instructionText += '<img src="static/img/compare_index_horizontal_labeled.png" height="400px">'
                 }
             } else {
-                instructionText += `In the example below, the highest bar of the TOP chart is closer to the right side of its chart than
-                    the highest bar of the BOTTOM chart is. So, you would press the <b>UP</b> ARROW KEY. <b>(The fact that the BOTTOM chart has the higher bar does not matter.)</b> `;
+                instructionText += `In the example below, the red bar on the BOTTOM is positioned farther to the right within its chart. So, you would press the <b>DOWN</b> ARROW KEY. <b>(The heights of red bars do not matter.)</b> `;
                 if (!currentLabel) {
                     instructionText += '<img src="static/img/compare_index_vertical_unlabeled.png" height="400px">'
                 } else {
@@ -158,20 +148,18 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
 
         instructionText += 'Please indicate your answer as ACCURATELY and as QUICKLY as possible. <br/><br/>'
 
-        instructionText += `You will be asked to complete basic practice trials to get familiar with the task.
-            <br>You will need to get <b>five correct trials in a row</b> to proceed.
-            <br>Please make sure you understand the instructions before continuing!
-            <br>Please press the spacebar to start the practice trials.</p>`;
+        instructionText += `You will be asked to complete practice trials to get familiar with the task. You need to get <b>5 correct in a row</b> to proceed.
+            <br>Please make sure you understand the instructions. Please press the spacebar to start the practice trials.</p>`;
     // actual task instructions
     } else if (practice) {
         titleContainer.textContent = `Section ${blockCounter+1} of 4: Practice Trials`;
 
         instructionText += `Now you will complete 8 harder practice trials which closely resemble the real trials.`;
-        // instructionText += '<br>You have to get at least <b>7 out of 8 correct</b> to move on to the real trials.'
-        if (task === "compare_highest") {
-            instructionText += '<br><br> Again, your task is to report which chart has the highest bar. ';
+        instructionText += 'You do not need to press the spacebar in this section. The trials will advance automatically. '
+        if (task === "compare_height") {
+            instructionText += '<br><br> Again, your task is to identify which red bar is higher. ';
         } else {
-            instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. ";
+            instructionText += "<br><br> Again, your task is to identify which red bar is positioned farther to the right. ";
         }
         instructionText += '<br/><br/> Please indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>';
         instructionText += `</p><h3>Press the spacebar to start the 8 practice trials.</h3>`;
@@ -180,14 +168,8 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
 
         instructionText += `You got ${practiceCorrects} out of ${blockLength} correct.`;
         instructionText += `<br><br>Please remember that <b>accuracy</b> is just as important as speed!`;
-        instructionText += `<br><br>Now you will complete the real trials. There are 20 real trials.`;
-
-        // if (task === "compare_highest") {
-        //     instructionText += '<br><br> Again, your task is to report which chart has the highest bar. '
-        // } else {
-        //     instructionText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. "
-        // }
-        // instructionText += '<br/><br/> Again, indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>'
+        instructionText += `<br><br>Now you will complete the real trials. There are around 30 real trials.`;
+        instructionText += '<br>You do not need to press the spacebar in this section. The trials will advance automatically. '
         instructionText += `</p><h3>Press the spacebar to start the real trials.</h3>`;
     }
 
@@ -247,25 +229,6 @@ async function loadTrial() {
     if (isEasyPractice) {
         console.log(`loading easy practice trial ${trialCounter+1}`);
         data = practices_easy[trialCounter];
-        answer = data[2]
-
-        if (task === "compare_index") {
-            let modData = null;
-            if (trialCounter % 3 == 0) {
-                modData = data;
-            } else if (trialCounter % 3 == 1) {
-                modData = [...data];
-                const maxIndex = modData[2-data[2]].indexOf(Math.max(...modData[2-data[2]]));
-                modData[2-data[2]][maxIndex] -= 10;
-            } else {
-                modData = [...data];
-                const maxIndex = modData[data[2]-1].indexOf(Math.max(...modData[data[2]-1]));
-                modData[data[2]-1][maxIndex] -= 10;
-            }
-            displayCrosshair(500, () => displayCharts(modData));
-        } else {
-            displayCrosshair(500, () => displayCharts(data));
-        }
     } else {
         if (isPractice) {
             console.log(`loading practice trial ${trialCounter+1} of block ${blockCounter+1}`)
@@ -273,13 +236,9 @@ async function loadTrial() {
             console.log(`loading trial ${trialCounter+1} of block ${blockCounter+1}`)
         }
         data = stimuliBlock[trialCounter];
-        if (task == 'compare_highest') {
-            answer = data[2]
-        } else {
-            answer = data[3]
-        }
-        displayCrosshair(500, () => displayCharts(data));
     }
+    answer = task === "compare_height" ? data[2] : data[3]
+    displayCrosshair(500, () => displayCharts(data));
 }
 
 function displayCrosshair(duration, callback) {
@@ -323,8 +282,8 @@ function displayCharts(data) {
         ">
             <p id="controls-instruction" style="
                 position: absolute;
-                top: 5%;             /* Adjust this value as needed */
-                font-size: 20px;
+                top: 3%;             /* Adjust this value as needed */
+                font-size: 16px;
                 text-align: center;
                 width: 100%;
             ">
@@ -359,14 +318,14 @@ function displayCharts(data) {
                 top: 90%;             /* Adjust this value as needed */
                 font-size: 20px;
                 text-align: center;
-                max-width: 60%;
+                max-width: 80%;
             ">
             </p>
         </div>
     `;
 
-    const chartSpec1 = drawBarChart('chart1', data[0], currentLabel);
-    const chartSpec2 = drawBarChart('chart2', data[1], currentLabel);
+    const chartSpec1 = drawBarChart('chart1', data[0], data[4][0], currentLabel);
+    const chartSpec2 = drawBarChart('chart2', data[1], data[4][1], currentLabel);
 
     Promise.all([
         vegaEmbed('#chart1', chartSpec1, {"actions": false}).then(result => {
@@ -385,9 +344,9 @@ function displayCharts(data) {
     })
 }
 
-function drawBarChart(elementId, values, label) {
+function drawBarChart(elementId, values, redIndex, label) {
     const data = values.map((value, index) => ({
-        category: String.fromCharCode(49 + index),
+        category: `${index+1}`,
         value: value
     }));
 
@@ -401,23 +360,23 @@ function drawBarChart(elementId, values, label) {
         },
         "mark": "bar",
         "params": [
-          {
-            "name": "highlightBar",
-            "value": "none"  // Default: No highlighted bar
-          },
-          {
-            "name": "highlightColor",
-            "value": "black"
-          }
+            {
+                "name": "highlightBar",
+                "value": `${redIndex+1}`
+            },
+            {
+                "name": "highlightColor",
+                "value": "red"  // Highlight color is red
+            }
         ],
         "encoding": {
             "x": {
                 "field": "category",
+                "sort": null,  // Prevents automatic sorting of x-axis categories
                 "axis": {
                     "title": false,
                     "labels": label,     // Remove axis labels
                     "ticks": label,      // Remove axis ticks
-                    // "domain": false,     // Remove axis line
                     "grid": false,        // Remove gridlines
                     "labelAngle": 0,
                     "labelFontSize": 15*scale,
@@ -431,8 +390,7 @@ function drawBarChart(elementId, values, label) {
                     "title": false,
                     "labels": label,     // Remove axis labels
                     "ticks": label,      // Remove axis ticks
-                    // "domain": false,     // Remove axis line
-                    "grid": false,        // Remove gridlines
+                    "grid": label,        
                     "tickCount": 10,
                     "labelFontSize": 15*scale,
                     "orient": "left"
@@ -442,10 +400,10 @@ function drawBarChart(elementId, values, label) {
             "color": {
                 "condition": {
                     "test": "datum.category === highlightBar",
-                    "value": {"expr": "highlightColor"}
+                    "value": {"expr": "highlightColor"}  // Highlights one bar in red
                 },
-                "value": "black"
-            }
+                "value": "black"  // Default bar color
+            },
         },
         "config": {
             "view": {
@@ -457,13 +415,13 @@ function drawBarChart(elementId, values, label) {
     return chartSpec
 }
 
-function updateBarColor(chart_i, bar_i, newColor) {
-    const view = chart_i === 1 ? chartView1 : chartView2;
-    if (view) {
-        view.signal("highlightBar", String.fromCharCode(49 + bar_i)).run();  // Correctly update parameter
-        view.signal("highlightColor", newColor).run();  // Correctly update color parameter
-    }
-}
+// function updateBarColor(chart_i, bar_i, newColor) {
+//     const view = chart_i === 1 ? chartView1 : chartView2;
+//     if (view) {
+//         view.signal("highlightBar", String.fromCharCode(49 + bar_i)).run();  // Correctly update parameter
+//         view.signal("highlightColor", newColor).run();  // Correctly update color parameter
+//     }
+// }
 
 async function saveResponse(participantId, response) {
     const duration = stopTimer();
@@ -471,38 +429,26 @@ async function saveResponse(participantId, response) {
     stimuliBeingShown = false;
 
     if (isEasyPractice) {
-        const explanationContainer = document.getElementById('explanation');
-        // data[0] and data[1] are arrays, data[2] is answer
+        const explanationContainer = document.getElementById('controls-instruction');
+        // const explanationContainer = document.getElementById('explanation');
         let explanation = ""
-        const maxIndex1 = data[0].indexOf(Math.max(...data[0]));
-        const maxIndex2 = data[1].indexOf(Math.max(...data[1]));
-        const answer = data[2]
+        const answer = task === "compare_height" ? data[2] : data[3]
         const direction1 = currentLayout === "horizontal" ? "left" : "top";
         const direction2 = currentLayout === "horizontal" ? "right" : "bottom";
         const correctDirection = currentLayout === "horizontal" ? (answer === 1 ? "left" : "right") : (answer === 1 ? "top" : "bottom");
         const incorrectDirection = currentLayout === "horizontal" ? (answer === 1 ? "right" : "left") : (answer === 1 ? "bottom" : "top");
-        if (task === "compare_highest") {
-            updateBarColor(answer, answer == 1 ? maxIndex1 : maxIndex2, "green");
-            explanation += `The answer is the ${correctDirection} chart because it has the highest bar. `; 
-            // color the highest bar
+        if (task === "compare_height") {
+            explanation += `The answer is the <b>${correctDirection}</b> chart because its red bar is higher than the red bar of the ${incorrectDirection} chart. `; 
         } else {
-            updateBarColor(answer, answer == 1 ? maxIndex1 : maxIndex2, "green");
-            updateBarColor(3-answer, answer == 1 ? maxIndex2 : maxIndex1, "grey");
-            explanation += `The answer is the <b>${correctDirection}</b> chart because the green bar is closer to the right side of its chart than is the grey bar. `
-            // `Because ${answer == 1 ? maxIndex1+1 : maxIndex2+1} is bigger than ${answer == 1 ? maxIndex2+1 : maxIndex1+1}, the answer is the ${correctDirection} chart. `;
-            if (trialCounter % 3 == 2) {
-                explanation += `<br><b>(The fact that the ${incorrectDirection} chart has the highest bar does not matter.)</b>`
-            }
+            explanation += `The answer is the <b>${correctDirection}</b> chart because its red bar is closer to the right side of its chart than the red bar of the ${incorrectDirection} chart. `;
         }
-        explanation += '<br>Please press the spacebar for the next trial.';
+        explanation += '<br>Please press the <b>spacebar</b> for the next trial.';
         
         const fontColor = isCorrect ? "green" : "red";
         explanation = `<b><font color="${fontColor}">${isCorrect ? "Correct" : "Incorrect"}!</font></b><br>` + explanation
         
         explanationContainer.innerHTML = explanation;
-        // const feedbackContainer = document.getElementById('controls-instruction');
-        // feedbackContainer.textContent = isCorrect ? "Correct" : "Incorrect";
-        // feedbackContainer.style.color = isCorrect ? "green" : "red";
+
     } else {
         // Show full-screen feedback
         const feedbackOverlay = document.getElementById('feedback-overlay');
@@ -528,9 +474,8 @@ async function saveResponse(participantId, response) {
                 correct: response == answer ? 1 : 0, 
                 order: trialCounter,
                 time_when: now,
-                orientation: currentLayout,
+                layout: currentLayout,
                 label: currentLabel,
-                stimuli: [stimuli[blockCounter][trialCounter][0], stimuli[blockCounter][trialCounter][1]],
                 number: numbers[blockCounter][trialCounter],
                 duration: duration
             })
@@ -561,7 +506,7 @@ function handleNextTrialLoad() {
 // Hide after 500ms and load next trial
     setTimeout(() => {
         if (isEasyPractice) {
-            if (consecutivePracticeCorrects >= 5 || trialCounter >= practices_easy.length) {
+            if (consecutivePracticeCorrects >= 5 || trialCounter > 30) {
                 isEasyPractice = false;
                 if (trialCounter >= practices_easy.length) {
                     if (!participantId) {
@@ -596,8 +541,8 @@ function handleNextTrialLoad() {
                         if (!participantId) {
                             participantId = localStorage.getItem("participantId");
                         }
-                        // window.location.href = `/follow_up?participant_id=${participantId}`;
-                        window.location.href = `/thank_you`;
+                        window.location.href = `/follow_up?participant_id=${participantId}`;
+                        // window.location.href = `/thank_you`;
                     } else {
                         loadInstructions(blockCounter, practice=true, easyPractice=true)
                     }                
@@ -625,7 +570,7 @@ function showPracticeResults() {
         loadInstructions(blockCounter, false)
     } else {
         feedbackText += '<br><br> You have to get at least 7 out of 8 correct to move on to the real trials. ' 
-        if (task === "compare_highest") {
+        if (task === "compare_height") {
             feedbackText += "<br><br> Again, your task is to report which chart has the highest bar. "
         } else {
             feedbackText += "<br><br> Again, your task is to report which chart's highest bar is closer to the right side of its chart. "
