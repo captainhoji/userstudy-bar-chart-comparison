@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import os
+import csv
 
 def save_stimuli_images(stimuli, save_dir, layout, label):
     """
@@ -68,15 +69,28 @@ def save_stimuli_images(stimuli, save_dir, layout, label):
 
         print(f"Saved {save_filename}")
 
-
+def checkAnswerCongruence(stimuli):
+    data = [["stimuli_number", "answer_match"]]
+    for i, s in enumerate(stimuli):
+        if s[2] == s[3]:
+            data.append([i, "yes"])
+            data.append([-i, "yes"])
+        else:
+            data.append([i, "no"])
+            data.append([-i, "no"])
+    return data
 
 def main():
     # Load stimuli from pickle file
-    with open('stimuli_red/stimuli_easy.pickle', 'rb') as file:
+    with open('stimuli_red/stimuli.pickle', 'rb') as file:
         stimuli = pickle.load(file)
 
     # Generate and save images
-    save_stimuli_images(stimuli, save_dir = "stimuli_red/practice_easy", layout="horizontal", label=True)
+    # save_stimuli_images(stimuli, save_dir = "stimuli_red/practice_easy", layout="horizontal", label=True)
+    data = checkAnswerCongruence(stimuli)
+    with open("stimuli.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
 
 if __name__=="__main__":
     main()

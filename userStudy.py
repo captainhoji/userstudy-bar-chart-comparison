@@ -177,13 +177,17 @@ def initializeTask():
         global participantCounter
 
         # Assigning conditions
-        if participantCounter % 2 == 0:
-            task = "compare_height"
-        else:
-            task = "compare_index"
+        # if participantCounter % 2 == 0:
+        #     task = "compare_height"
+        # else:
+        #     task = "compare_index"
 
-        label_idx = (participantCounter//2)%2
-        layout_idx = (participantCounter//4)%2
+        # label_idx = (participantCounter//2)%2
+        # layout_idx = (participantCounter//4)%2
+  
+        task = "compare_index"
+        layout_idx = 1
+        label_idx = 1
 
         label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
         layout = [layout[i] for i in [layout_idx, 1-layout_idx, layout_idx, 1-layout_idx]]
@@ -209,25 +213,6 @@ def initializeTask():
         indexes_shuffled = [obj.tolist() for obj in indexes_shuffled]
         stimuli_copy = [[stimuli[i] for i in sublist] for sublist in indexes_shuffled]
 
-
-        # Add engagement checks
-        # if task == "compare_height":
-        #     validation_stimuli = validation_stimuli_compare_height
-        # else:
-        #     validation_stimuli = validation_stimuli_compare_index
-
-        # j = 0
-        # random.shuffle(validation_stimuli)
-        # for i in range(len(validation_stimuli)):
-        #     indexes_shuffled[i//5].insert((i%5)*5 + 4, validation_stimuli[i])
-        # validation_indexes = [5*i + 4 for i in range(5)]
-        # for v_index in validation_indexes:
-        #     for i, subgroup in enumerate(indexes_shuffled):
-        #         subgroup.insert(v_index, 999)
-        #         stimuli_copy[i].insert(v_index, validation_stimuli[j])
-        #         j += 1
-
-        
         # swap the answer position with 50% chance
         for i in range(4):
             for j, s in enumerate(stimuli_copy[i]):

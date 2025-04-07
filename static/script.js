@@ -193,7 +193,7 @@ function loadInstructions(blockCounter, practice=true, easyPractice=false) {
     console.log("currentLayout: ", currentLayout)
 
     document.addEventListener("keydown", handleSpacePress(loadTrial));
-    document.removeEventListener('keydown', handleKeyPress);    // Remove any existing keydown event listeners to prevent duplicates
+    document.removeEventListener('keydown', handleKeyPress);
     document.addEventListener('keydown', handleKeyPress);
 }
 
@@ -209,15 +209,15 @@ function handleSpacePress(callback) {
 function handleKeyPress(event) {
     if (!stimuliBeingShown) return;
     if (currentLayout === 'horizontal') {
-        if (event.key === 'ArrowLeft') {
+        if (event.key === 'ArrowLeft' || event.code === 'ArrowLeft') {
             saveResponse(participantId, "1");
-        } else if (event.key === 'ArrowRight') {
+        } else if (event.key === 'ArrowRight' || event.code === 'ArrowRight') {
             saveResponse(participantId, "2");
         }
     } else if (currentLayout === 'vertical') {
-        if (event.key === 'ArrowUp') {
+        if (event.key === 'ArrowUp' || event.code === 'ArrowUp') {
             saveResponse(participantId, "1");
-        } else if (event.key === 'ArrowDown') {
+        } else if (event.key === 'ArrowDown' || event.code === 'ArrowDown') {
             saveResponse(participantId, "2");
         }
     }
@@ -281,11 +281,12 @@ function displayCharts(data) {
             width: 100vw;             /* Full viewport width */
         ">
             <p id="controls-instruction" style="
-                position: absolute;
-                top: 3%;             /* Adjust this value as needed */
-                font-size: 16px;
+                // position: absolute;
+                // top: 3%;             /* Adjust this value as needed */
+                font-size: 18px;
                 text-align: center;
                 width: 100%;
+                margin-bottom: 20px;
             ">
                 Respond using the ${currentLayout === "horizontal" ? "left" : "up"} or ${currentLayout === "horizontal" ? "right" : "down"} arrow key
             </p>
