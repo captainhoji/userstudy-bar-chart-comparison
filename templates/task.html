@@ -5,7 +5,6 @@
     <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -13,7 +12,6 @@
         <div class="instruction-content">
             <h2 id="section-title">Instructions: Study Overview</h2>
             <div id="instruction-text"></div>
-
         </div>
     </div>
     
@@ -22,9 +20,41 @@
     <div id="feedback-overlay" style="display: none;">
         <span id="feedback-text"></span>
     </div>
+
+    <div id="fullscreen-warning" style="position: fixed; top:0; left:0; width:100%; height:100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+        <h2>This experiment requires fullscreen mode</h2>
+        <button style="width:50%;" onclick="goFullscreen()">Enter Fullscreen</button>
+    </div>
+
     <script>
-        const participantId = "{{ participant_id }}";
-        initializeStudy(participantId);
+        let participantId = "{{ participant_id }}";
+        let task = "{{ task }}" 
+        let orientationStr = "{{ orientationStr }}"
+        let layoutStr = "{{ layoutStr }}"
+
+        if (!participantId) {
+          participantId = localStorage.getItem("participantId");
+        }
+        if (!task) {
+          task = localStorage.getItem("task");
+        }
+        if (!orientationStr) {
+          orientationStr = localStorage.getItem("orientationStr");
+        }
+        if (!layoutStr) {
+          layoutStr = localStorage.getItem("layoutStr");
+        }
+        
+        function goFullscreen() {
+            document.documentElement.requestFullscreen().then(() => {
+              document.getElementById('fullscreen-warning').style.display = 'none';
+            }).catch((err) => {
+              alert("Fullscreen failed. Please try again.");
+              console.error(err);
+            });
+          }
     </script>
+    </script>
+    <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>

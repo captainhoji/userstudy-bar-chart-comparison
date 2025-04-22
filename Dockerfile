@@ -7,6 +7,8 @@ FROM python:${PYTHON_VERSION}-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_DEBUG=1
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=development
 
 # Install required packages (Apache, mod_wsgi, and dependencies)
 RUN apt-get update && apt-get install -y \
@@ -29,7 +31,8 @@ RUN mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg
 
 # Add Microsoft repository for ODBC Driver 18
-RUN echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" | tee /etc/apt/sources.list.d/mssql-release.list
+# Change to arm64 if using in macos
+RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" | tee /etc/apt/sources.list.d/mssql-release.list
 
 # Update package lists and install ODBC Driver 18
 RUN apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \

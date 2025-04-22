@@ -11,18 +11,28 @@ DELETE FROM Trial;
 DBCC CHECKIDENT ('Trial', RESEED, 0);
 
 
-CREATE TABLE Participant (
-    id INT IDENTITY(1,1) PRIMARY KEY,  -- Auto-incrementing unique ID
-    participant_id NVARCHAR(50) NOT NULL UNIQUE,  -- Participant ID (unique constraint)
-    age INT,  -- Age of participant
-    gender NVARCHAR(10),  -- Gender of participant (e.g., Male, Female, Non-binary)
-    registration_date DATETIME DEFAULT GETDATE(),  -- Registration timestamp (default to current time)
-    task BIT NOT NULL DEFAULT 0 -- Task type
+CREATE TABLE Trial_range (
+    participant_id NVARCHAR(255) NOT NULL,
+    task NVARCHAR(20) NOT NULL,
+    stimuli_number INT NOT NULL,
+    trial_number INT NOT NULL,
+    layout NVARCHAR(10) NOT NULL,
+    orientation NVARCHAR(10) NOT NULL,
+    correct BIT NOT NULL,
+    response VARCHAR(2) NOT NULL,
+    duration FLOAT,
+    time_when DATETIME
 );
 
 
 
 cat /var/log/apache2/error.log
+
+# Use this in VM to see python logs
+sudo docker exec -it userstudy-container cat /var/log/apache2/error.log
+# Use this to track logs real time
+sudo docker exec -it userstudy-container tail -f /var/log/apache2/error.log
+
 
 
 sudo docker stop userstudy-container

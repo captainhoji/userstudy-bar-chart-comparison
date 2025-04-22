@@ -35,7 +35,7 @@
             If you decide to participate, you will be asked to look at bar charts and answer questions based on the charts.
             There will be multiple trials, with each trial lasting a few seconds. 
             Then, you will be asked to answer some questions based on your experience with the trials. 
-            There are a total of four sections, each containing 25 to 30 trials.
+            There are a total of four sections, each containing 36 trials.
             Your participation will last approximately <strong>20 minutes</strong>.
         </p>
 
@@ -68,6 +68,18 @@
 
 </body>
 <script>
+    const task = "{{ task }}" 
+    const orientationStr = "{{ orientationStr }}"
+    const layoutStr = "{{ layoutStr }}"
+
+    console.log(task);
+    console.log(orientationStr);
+    console.log(layoutStr);
+
+    localStorage.setItem("task", task);
+    localStorage.setItem("orientationStr", orientationStr);
+    localStorage.setItem("layoutStr", layoutStr);
+
     document.getElementById("consentCheck").addEventListener("change", function() {
         document.getElementById("continueBtn").disabled = !this.checked;
     });

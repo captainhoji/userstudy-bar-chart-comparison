@@ -78,6 +78,13 @@ button:disabled {
     cursor: not-allowed;
 }
 
+a.button.disabled {
+  background-color: #ccc;
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 #readyButton {
     text-align: center;
     text-decoration: none;

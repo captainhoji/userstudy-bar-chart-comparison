@@ -23,7 +23,7 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli_red'
+stimuliDir = 'stimuli_range'
 
 participantCounter = 0
 
@@ -36,8 +36,8 @@ with open(stimuliDir + '/practice.pickle', 'rb') as file:
 with open(stimuliDir + '/stimuli_easy.pickle', 'rb') as file:
     practice_easy = pickle.load(file)  
 
-# with open(stimuliDir + '/validation_stimuli_compare_height.pickle', 'rb') as file:
-#     validation_stimuli_compare_height = pickle.load(file)  
+with open(stimuliDir + '/validation_stimuli.pickle', 'rb') as file:
+    validation_stimuli = pickle.load(file)  
 
 # with open(stimuliDir + '/validation_stimuli_compare_index.pickle', 'rb') as file:
 #     validation_stimuli_compare_index = pickle.load(file)  
@@ -56,7 +56,10 @@ def get_db_connection():
 # Instructions page
 @app.route('/')
 def instructions():
-    return render_template('consent.html')
+    task = request.args.get('task')
+    orientationStr = request.args.get('orientation')
+    layoutStr = request.args.get('layout')
+    return render_template('consent.html', task=task, orientationStr=orientationStr, layoutStr=layoutStr)
 
 # Verification page
 @app.route('/verification')
@@ -137,8 +140,11 @@ def submit_survey():
 
 @app.route('/task')
 def task():
-    participant_id = request.args.get('participant_id')
-    return render_template("task.html", participant_id=participant_id)  # Redirect to the task page
+    participant_id = request.args.get('participant_id', '')
+    task = request.args.get('task', '')
+    orientationStr = request.args.get('orientation', '')
+    layoutStr = request.args.get('layout', '')
+    return render_template("task.html", participant_id=participant_id, task=task, orientationStr = orientationStr, layoutStr = layoutStr)  # Redirect to the task page
 
 @app.route('/follow_up', methods=['GET'])
 def followup():
@@ -169,79 +175,89 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
+    task = data['task']
+    layoutStr = data['layoutStr']
+    orientationStr = data['orientationStr']
 
     if data['message'] == 'initialize':
-
-        label = [False, True]
-        layout = ['horizontal', 'vertical']
+        
         global participantCounter
 
         # Assigning conditions
-        # if participantCounter % 2 == 0:
-        #     task = "compare_height"
-        # else:
-        #     task = "compare_index"
+        if not task or task == "None":
+            if participantCounter % 3 == 0:
+                task = "compare_height"
+            elif participantCounter % 3 == 1:
+                task = "compare_index"
+            else:
+                task = "compare_length"
 
-        # label_idx = (participantCounter//2)%2
-        # layout_idx = (participantCounter//4)%2
-  
-        task = "compare_index"
-        layout_idx = 1
-        label_idx = 1
+        if not validate_orientationStr(layoutStr):
+            layout = ['horizontal', 'vertical']
+            layout_idx = random.randint(0,1)
+            layout = [layout[i] for i in [layout_idx, 1-layout_idx, layout_idx, 1-layout_idx]]
+        else:
+            layout = decode_orientation(layoutStr)
 
-        label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
-        layout = [layout[i] for i in [layout_idx, 1-layout_idx, layout_idx, 1-layout_idx]]
+        if not validate_orientationStr(orientationStr):
+            orientation = ['horizontal', 'vertical']
+            orientation_idx = random.randint(0, 1)
+            orientation = [orientation[i] for i in [orientation_idx, orientation_idx, 1-orientation_idx, 1-orientation_idx]]
+        else:
+            orientation = decode_orientation(orientationStr)
+
+        # if task == "compare_height":
+        #     if random.random() < 1/2:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+        #     else:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        # elif task == "compare_length":
+        #     if random.random() < 1/2:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+        #     else:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+        # elif task == "compare_index":
+        #     if random.random() < 3/7:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+        #     else:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+
 
         participantCounter += 1
 
-        '''
-        Add stimuli
-        '''
+        # Add Stimuli
         indexes_shuffled = []
-        difficulty_levels = 3
-        stimuli_per_block = 27
+        difficulty_levels = 2
+        stimuli_per_block = 32
 
-        arr = np.arange(stimuli_per_block*4)
-        split_arrays = np.split(arr, difficulty_levels ** 2)
-        for subarray in split_arrays:
-            np.random.shuffle(subarray)
-            indexes_shuffled.append(np.split(subarray, 4))
-        indexes_shuffled = [np.concatenate(group) for group in zip(*indexes_shuffled)]
-        for indexes_in_condition in indexes_shuffled:
-            np.random.shuffle(indexes_in_condition)
-
-        indexes_shuffled = [obj.tolist() for obj in indexes_shuffled]
-        stimuli_copy = [[stimuli[i] for i in sublist] for sublist in indexes_shuffled]
-
-        # swap the answer position with 50% chance
+        shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
         for i in range(4):
-            for j, s in enumerate(stimuli_copy[i]):
-                if random.random() < 0.5:
-                    s[0], s[1] = s[1], s[0]
-                    s[2] = 3-s[2]
-                    s[3] = 3-s[3]
-                    s[4][0], s[4][1] = s[4][1], s[4][0]
-                    indexes_shuffled[i][j] *= -1
+            for idx in shuffled_index[i]:
+                assert(idx < 32*(i+1))
+
+        # Inject Engagement Checks
+        random.shuffle(validation_stimuli)
+        for i in range(4):
+            for j in range(4):
+                shuffled_stimuli[i].insert(j*9+5, validation_stimuli[i*4+j])
+                shuffled_index[i].insert(j*9+5, -999)
 
         '''
         Add easy practice stimuli
         '''
-        for i, s in enumerate(practice_easy):
-            if random.random() < 0.5:
-                # print("before: ", practice_easy[i])
-                s[0], s[1] = s[1], s[0]
-                s[4][0], s[4][1] = s[4][1], s[4][0] # swapping the red bar index as well
-                s[2] = 3-s[2]
-                s[3] = 3-s[3]
-                # print("after: ", practice_easy[i])
-            # print(f"{i}:, {practice_easy[i]}")
         conditions = {
             "task": task,
-            "label": label,
+            "orientation": orientation,
             "layout": layout,
-            "stimuli": stimuli_copy,
+            "label": [False] * 4,
+            "stimuli": shuffled_stimuli,
             "practice_easy": practice_easy,
-            "numbers": indexes_shuffled
+            "numbers": shuffled_index
         }
         return jsonify(conditions)
 
@@ -252,57 +268,21 @@ def getPracticeBlock():
     '''
     practices_per_block = 8
     practiceBlock = random.sample(practice, practices_per_block)
-    for p in practiceBlock:
-        if random.random() < 0.5:
-            p[0], p[1] = p[1], p[0]
-            p[2] = 3-p[2]
-            p[3] = 3-p[3]
-            p[4][0], p[4][1] = p[4][1], p[4][0]
     return jsonify({"practice": practiceBlock})
 
 # Save response to database
 @app.route('/save_response', methods=['POST'])
 def save_response():
-    # participant_id: participantId,
-    # task: task,
-    # response: response, 
-    # correct: response == answer ? 1 : 0, 
-    # order: trialCounter,
-    # time_when: now,
-    # orientation: currentLayout,
-    # label: currentLabel,
-    # stimuli: [stimuli[blockCounter][trialCounter][0], stimuli[blockCounter][trialCounter][1]],
-    # number: number
-    # duration: duration
     data = request.get_json()
-    participant_id = data['participant_id']
-    task = data['task']
-    response = data['response']
-    correct = data['correct']
-    trial_number = data['order']
-    time_when = data['time_when']
-    layout = data['layout']
-    label = data['label']
-    duration = data['duration']
-    stimuli_number = data['number']
-
-    if task == "compare_height":
-        task = 0
-    else:
-        task = 1
-    if layout == "horizontal":
-        layout = 0
-    else:
-        layout = 1
+    fields = ["participant_id", "task", "layout", "orientation", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when"]
+    values = [data[field] for field in fields]
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Trial_red_new (participant_id, task, stimuli_number, trial_number, layout, label, correct, response, duration, time_when) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                       (participant_id, task, stimuli_number, trial_number, layout, label, correct, response, duration, time_when))
+        insert_row(cursor, "Trial_range", fields, values)
         conn.commit()
         conn.close()
-        print(f'participant {participant_id} trial {trial_number} data saved.')
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400
@@ -310,27 +290,16 @@ def save_response():
 @app.route("/save_practiceFail", methods=['POST'])
 def save_practiceFail():
     data = request.get_json()
-    participant_id = data['participant_id']
-    orientation = data['orientation']
-    label = data['label']
-    task = data['task']
-    if task == "compare_height":
-        task = 0
-    else:
-        task = 1
-    if orientation == "horizontal":
-        orientation = 0
-    else:
-        orientation = 1
+    fields = ["participant_id", "task", "layout", "orientation"]
+    values = [data[field] for field in fields]
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Practice_fail (participant_id, task, orientation, label) VALUES (?, ?, ?, ?)", 
-                       (participant_id, task, orientation, label))
+        insert_row(cursor, "Practice_fail_range", fields, values)
         conn.commit()
         conn.close()
-        print(f'participant {participant_id} failed easy practice on {task}, {orientation}, {label}. Data saved.')
+        print(f"participant {data['participant_id']} failed easy practice on {data['task']}, {data['layout']}, {data['label']}. Data saved.")
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400
@@ -338,6 +307,46 @@ def save_practiceFail():
 @app.route("/thank_you")
 def thank_you():
     return render_template("thank_you.html")
+
+def shuffle_stimuli_in_blocks(stimuli, num_blocks=4):
+    block_size = len(stimuli) // num_blocks
+    shuffled_stimuli = []
+    index_mapping = []
+
+    for i in range(num_blocks):
+        start = i * block_size
+        end = start + block_size
+        block = stimuli[start:end]
+
+        # Add index tracking
+        indexed_block = list(enumerate(block, start=start))
+
+        # Shuffle the block
+        random.shuffle(indexed_block)
+
+        # Unzip to get back to stimuli and indexes
+        indices, shuffled_block = map(list, zip(*indexed_block))
+
+        shuffled_stimuli.append(shuffled_block)
+        index_mapping.append(indices)
+
+    return shuffled_stimuli, index_mapping
+
+def insert_row(cursor, table, fields, values):
+    sql = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})"
+    cursor.execute(sql, values)
+
+def validate_orientationStr(code):
+    if code and len(code) == 4:
+        for ch in code:
+            if ch != 'v' and ch != 'h':
+                return False
+        return True
+    return False
+
+def decode_orientation(code: str) -> list:
+    mapping = {'v': 'vertical', 'h': 'horizontal'}
+    return [mapping[char] for char in code]
 
 if __name__ == '__main__':
     app.run(debug=True)
