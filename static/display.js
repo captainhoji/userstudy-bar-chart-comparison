@@ -84,7 +84,7 @@ export function displayCharts({ data, task, correctAnswer, layout, orientation, 
 
   const isCorrectAnswerFirst = correctAnswer == 1 ? true : false;
   const chartSpec1 = drawBarChart({ values: data[0], redIndex: data[6][0], isAnswer: isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues" });
-  const chartSpec2 = drawBarChart({ values: data[1], redIndex: data[6][1], isAnswer: !isCorrectAnswerFirst, label, orientation, scale, colorScheme: "reds"});
+  const chartSpec2 = drawBarChart({ values: data[1], redIndex: data[6][1], isAnswer: !isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues"});
 
   Promise.all([
     vegaEmbed('#chart1', chartSpec1, { actions: false }),
