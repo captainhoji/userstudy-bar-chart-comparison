@@ -23,7 +23,7 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli_range'
+stimuliDir = 'stimuli_blue'
 
 participantCounter = 0
 
@@ -185,12 +185,10 @@ def initializeTask():
 
         # Assigning conditions
         if not task or task == "None":
-            if participantCounter % 3 == 0:
+            if participantCounter % 2 == 0:
                 task = "compare_height"
-            elif participantCounter % 3 == 1:
+            elif participantCounter % 2 == 1:
                 task = "compare_index"
-            else:
-                task = "compare_length"
 
         if not validate_orientationStr(layoutStr):
             layout = ['horizontal', 'vertical']
@@ -280,7 +278,7 @@ def save_response():
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        insert_row(cursor, "Trial_range", fields, values)
+        insert_row(cursor, "Trial_blue", fields, values)
         conn.commit()
         conn.close()
         return jsonify({'message': 'Response saved successfully'}), 200

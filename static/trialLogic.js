@@ -25,6 +25,7 @@ export function loadTrial() {
   } else {
     trialData = config.stimuli[config.blockCounter][config.trialCounter];
     console.log(`loading ${config.isPractice ? 'practice' : 'real'} trial ${config.trialCounter + 1} of block ${config.blockCounter + 1}`);
+    console.log(`number: ` + config.numbers[config.blockCounter][config.trialCounter]);
   }
 
   correctAnswer = {
