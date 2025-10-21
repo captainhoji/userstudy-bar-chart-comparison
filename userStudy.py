@@ -58,7 +58,15 @@ def get_db_connection():
 # Instructions page
 @app.route('/')
 def instructions():
+<<<<<<< Updated upstream
     return render_template('consent.html')
+=======
+    task = request.args.get('task')
+    orientationStr = request.args.get('orientation')
+    layoutStr = request.args.get('layout')
+    chartType = request.args.get('chartType')
+    return render_template('consent.html', task=task, orientationStr=orientationStr, layoutStr=layoutStr, chartType=chartType)
+>>>>>>> Stashed changes
 
 # Instructions page
 @app.route('/verification')
@@ -139,8 +147,17 @@ def submit_survey():
 
 @app.route('/task')
 def task():
+<<<<<<< Updated upstream
     participant_id = request.args.get('participant_id')
     return render_template("task.html", participant_id=participant_id)  # Redirect to the task page
+=======
+    participant_id = request.args.get('participant_id', '')
+    task = request.args.get('task', '')
+    orientationStr = request.args.get('orientation', '')
+    layoutStr = request.args.get('layout', '')
+    chartType = request.args.get('chartType', '')
+    return render_template("task.html", participant_id=participant_id, task=task, orientationStr = orientationStr, layoutStr = layoutStr, chartType = chartType)  # Redirect to the task page
+>>>>>>> Stashed changes
 
 @app.route('/follow_up', methods=['GET'])
 def followup():
@@ -171,6 +188,13 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
+<<<<<<< Updated upstream
+=======
+    task = data['task']
+    layoutStr = data['layoutStr']
+    orientationStr = data['orientationStr']
+    chartType = data['chartType']
+>>>>>>> Stashed changes
 
     if data['message'] == 'initialize':
 
@@ -188,6 +212,7 @@ def initializeTask():
         label_idx = (participantCounter//2)%2
         orientation_idx = (participantCounter//4)%2
 
+<<<<<<< Updated upstream
         # Assigning conditions constrained
         # task = "compare_index"
         # if random.random() < 0.5:
@@ -198,6 +223,31 @@ def initializeTask():
         #     orientation_idx = 0
         # else:
         #     orientation_idx = 1
+=======
+        if not chartType or chartType == "None":
+            chartType = "floating_bar" # floating bar is the default chart type that u see if no chart type is specified.
+
+        # if task == "compare_height":
+        #     if random.random() < 1/2:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+        #     else:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        # elif task == "compare_length":
+        #     if random.random() < 1/2:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+        #     else:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+        # elif task == "compare_index":
+        #     if random.random() < 3/7:
+        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+        #     else:
+        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+>>>>>>> Stashed changes
 
         label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
         orientation = [orientation[i] for i in [orientation_idx, 1-orientation_idx, orientation_idx, 1-orientation_idx]]
@@ -254,7 +304,11 @@ def initializeTask():
 
         conditions = {
             "task": task,
+<<<<<<< Updated upstream
             "label": label,
+=======
+            "chartType": chartType,
+>>>>>>> Stashed changes
             "orientation": orientation,
             "whatToAlterFirst": whatToAlterFirst,
             "stimuli": stimuliblocks,
@@ -293,6 +347,7 @@ def save_response():
     # number: number
     # duration: duration
     data = request.get_json()
+<<<<<<< Updated upstream
     participant_id = data['participant_id']
     task = data['task']
     response = data['response']
@@ -314,6 +369,10 @@ def save_response():
         orientation = 0
     else:
         orientation = 1
+=======
+    fields = ["participant_id", "task", "layout", "orientation", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when", "chart_type"]
+    values = [data[field] for field in fields]
+>>>>>>> Stashed changes
 
     conn = get_db_connection()
     if conn:
@@ -330,6 +389,7 @@ def save_response():
 @app.route("/save_practiceFail", methods=['POST'])
 def save_practiceFail():
     data = request.get_json()
+<<<<<<< Updated upstream
     participant_id = data['participant_id']
     orientation = data['orientation']
     label = data['label']
@@ -342,6 +402,10 @@ def save_practiceFail():
         orientation = 0
     else:
         orientation = 1
+=======
+    fields = ["participant_id", "task", "layout", "orientation", "chart_type"]
+    values = [data[field] for field in fields]
+>>>>>>> Stashed changes
 
     conn = get_db_connection()
     if conn:
@@ -350,7 +414,11 @@ def save_practiceFail():
                        (participant_id, task, orientation, label))
         conn.commit()
         conn.close()
+<<<<<<< Updated upstream
         print(f'participant {participant_id} failed easy practice on {task}, {orientation}, {label}. Data saved.')
+=======
+        print(f"participant {data['participant_id']} failed easy practice on {data['task']}, {data['layout']}, {data['label']}, {data['chart_type']}. Data saved.")
+>>>>>>> Stashed changes
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400

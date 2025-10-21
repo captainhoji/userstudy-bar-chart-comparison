@@ -23,8 +23,41 @@
         <span id="feedback-text"></span>
     </div>
     <script>
+<<<<<<< Updated upstream
         const participantId = "{{ participant_id }}";
         initializeStudy(participantId);
+=======
+        let participantId = "{{ participant_id }}";
+        let task = "{{ task }}" 
+        let orientationStr = "{{ orientationStr }}"
+        let layoutStr = "{{ layoutStr }}"
+        let chartType = "{{ chartType }}"
+
+        if (!participantId) {
+          participantId = localStorage.getItem("participantId");
+        }
+        if (!task) {
+          task = localStorage.getItem("task");
+        }
+        if (!orientationStr) {
+          orientationStr = localStorage.getItem("orientationStr");
+        }
+        if (!layoutStr) {
+          layoutStr = localStorage.getItem("layoutStr");
+        }
+        if (!chartType) {
+            chartType = localStorage.getItem("chartType");
+        }
+        
+        function goFullscreen() {
+            document.documentElement.requestFullscreen().then(() => {
+              document.getElementById('fullscreen-warning').style.display = 'none';
+            }).catch((err) => {
+              alert("Fullscreen failed. Please try again.");
+              console.error(err);
+            });
+          }
+>>>>>>> Stashed changes
     </script>
 </body>
 </html>
