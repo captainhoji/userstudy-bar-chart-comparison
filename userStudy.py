@@ -175,9 +175,8 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
-    task = data['task']
-    layoutStr = data['layoutStr']
-    orientationStr = data['orientationStr']
+    first_task = data['first_task']
+    second_task = data['second_task']
 
     if data['message'] == 'initialize':
         
@@ -190,19 +189,20 @@ def initializeTask():
             elif participantCounter % 2 == 1:
                 task = "compare_index"
 
-        if not validate_orientationStr(layoutStr):
-            layout = ['horizontal', 'vertical']
-            layout_idx = random.randint(0,1)
-            layout = [layout[i] for i in [layout_idx, 1-layout_idx, layout_idx, 1-layout_idx]]
-        else:
-            layout = decode_orientation(layoutStr)
+        if not first_task or first_task == "None":
+            if participantCounter % 2 == 0:
+                first_task = "darkest"
+            elif participantCounter % 2 == 1:
+                first_task = "lightest"
+        if not second_task or second_task == "None":
+            if participantCounter % 2 == 0:
+                second_task = "longer"
+            elif participantCounter % 2 == 1:
+                second_task = "shorter"
 
-        if not validate_orientationStr(orientationStr):
-            orientation = ['horizontal', 'vertical']
-            orientation_idx = random.randint(0, 1)
-            orientation = [orientation[i] for i in [orientation_idx, orientation_idx, 1-orientation_idx, 1-orientation_idx]]
-        else:
-            orientation = decode_orientation(orientationStr)
+        task = 'compare_length'
+        layout = 'horizontal'
+        orientation = 'vertical'
 
         # if task == "compare_height":
         #     if random.random() < 1/2:
@@ -233,10 +233,10 @@ def initializeTask():
         difficulty_levels = 2
         stimuli_per_block = 32
 
-        shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
-        for i in range(4):
-            for idx in shuffled_index[i]:
-                assert(idx < 32*(i+1))
+        # shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
+        # for i in range(4):
+        #     for idx in shuffled_index[i]:
+        #         assert(idx < 32*(i+1))
 
         # Inject Engagement Checks
         random.shuffle(validation_stimuli)

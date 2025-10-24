@@ -31,6 +31,8 @@ export function drawBarChart({
     ]
   };
 
+  colorPalettes.blues.reverse();
+
   return {
     "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
     "width": 200 * scale,
