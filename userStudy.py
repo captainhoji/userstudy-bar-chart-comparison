@@ -23,7 +23,7 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli_blue'
+stimuliDir = 'stimuli_range'
 
 participantCounter = 0
 
