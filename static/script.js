@@ -49,13 +49,9 @@ async function initializeStudy(participantId, task) {
 
   instructionText = `<p>This experiment consists of 4 sections.<br>
         Each section will include a few practice trials followed by around 30 real trials.<br><br>
-  On each trial, you will be presented with two bar charts. Each bar chart will have one red bar. You will be asked to <strong>`
+  On each trial, you will be presented with two bar charts. You will be asked to <strong>`
 
-  if (task == "compare_height") {
-    instructionText += 'identify which red bar is taller</strong>.'
-  } else if (task == "compare_index") {
-    instructionText += 'identify which red bar is positioned farther to the right</strong>.'
-  }
+  instructionText += 'identify the darkest bar from each chart and compare their lengths</strong>.'
 
   instructionText += '<br><br>Please press the spacebar to see the instructions for section 1.</p>'
 

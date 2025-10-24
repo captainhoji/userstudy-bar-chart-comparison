@@ -175,89 +175,81 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
-    first_task = data['first_task']
-    second_task = data['second_task']
+    first_task = data.get('first_task', None)
+    second_task = data.get('second_task', None)
+    task = 'compare_length'
+    
+    global participantCounter
 
-    if data['message'] == 'initialize':
-        
-        global participantCounter
+    # Assigning conditions
+    if not first_task or first_task == "None":
+        if participantCounter % 2 == 0:
+            first_task = "darkest"
+        elif participantCounter % 2 == 1:
+            first_task = "lightest"
+    if not second_task or second_task == "None":
+        if participantCounter % 2 == 0:
+            second_task = "longer"
+        elif participantCounter % 2 == 1:
+            second_task = "shorter"
+    
+    layout = 'horizontal'
+    orientation = 'vertical'
 
-        # Assigning conditions
-        if not task or task == "None":
-            if participantCounter % 2 == 0:
-                task = "compare_height"
-            elif participantCounter % 2 == 1:
-                task = "compare_index"
-
-        if not first_task or first_task == "None":
-            if participantCounter % 2 == 0:
-                first_task = "darkest"
-            elif participantCounter % 2 == 1:
-                first_task = "lightest"
-        if not second_task or second_task == "None":
-            if participantCounter % 2 == 0:
-                second_task = "longer"
-            elif participantCounter % 2 == 1:
-                second_task = "shorter"
-
-        task = 'compare_length'
-        layout = 'horizontal'
-        orientation = 'vertical'
-
-        # if task == "compare_height":
-        #     if random.random() < 1/2:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-        #     else:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        # elif task == "compare_length":
-        #     if random.random() < 1/2:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-        #     else:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-        # elif task == "compare_index":
-        #     if random.random() < 3/7:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-        #     else:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+    # if task == "compare_height":
+    #     if random.random() < 1/2:
+    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+    #     else:
+    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+    # elif task == "compare_length":
+    #     if random.random() < 1/2:
+    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
+    #     else:
+    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+    #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+    # elif task == "compare_index":
+    #     if random.random() < 3/7:
+    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
+    #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
+    #     else:
+    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
+    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
 
 
-        participantCounter += 1
+    participantCounter += 1
 
-        # Add Stimuli
-        indexes_shuffled = []
-        difficulty_levels = 2
-        stimuli_per_block = 32
+    # Add Stimuli
+    indexes_shuffled = []
+    difficulty_levels = 2
+    stimuli_per_block = 32
 
-        # shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
-        # for i in range(4):
-        #     for idx in shuffled_index[i]:
-        #         assert(idx < 32*(i+1))
+    shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
+    for i in range(4):
+        for idx in shuffled_index[i]:
+            assert(idx < 32*(i+1))
 
-        # Inject Engagement Checks
-        random.shuffle(validation_stimuli)
-        for i in range(4):
-            for j in range(4):
-                shuffled_stimuli[i].insert(j*9+5, validation_stimuli[i*4+j])
-                shuffled_index[i].insert(j*9+5, -999)
+    # Inject Engagement Checks
+    random.shuffle(validation_stimuli)
+    for i in range(4):
+        for j in range(4):
+            shuffled_stimuli[i].insert(j*9+5, validation_stimuli[i*4+j])
+            shuffled_index[i].insert(j*9+5, -999)
 
-        '''
-        Add easy practice stimuli
-        '''
-        conditions = {
-            "task": task,
-            "orientation": orientation,
-            "layout": layout,
-            "label": [False] * 4,
-            "stimuli": shuffled_stimuli,
-            "practice_easy": practice_easy,
-            "numbers": shuffled_index
-        }
-        return jsonify(conditions)
+    '''
+    Add easy practice stimuli
+    '''
+    conditions = {
+        "task": task,
+        "orientation": orientation,
+        "layout": layout,
+        "label": [False] * 4,
+        "stimuli": shuffled_stimuli,
+        "practice_easy": practice_easy,
+        "numbers": shuffled_index
+    }
+    return jsonify(conditions)
 
 @app.route('/get_practice')
 def getPracticeBlock():
