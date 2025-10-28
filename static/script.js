@@ -6,6 +6,8 @@ let currentLayout = 'horizontal';
 let currentLabel = false;
 let currentOrientation = false;
 let task = null;
+let firstTask = null;
+let secondTask = null;
 let layout = null;
 let orientation = null;
 let whatToAlterFirst = null;
@@ -41,11 +43,13 @@ async function initializeStudy(participantId, task) {
   layout = data.layout;
   stimuli = data.stimuli;
   practices_easy = data.practice_easy;
-  numbers = data.numbers
+  numbers = data.numbers;
+  firstTask = data.first_task;
+  secondTask = data.second_task;
 
   blockCounter = 0;
 
-  console.log({ task, label, layout, orientation, stimuli, numbers });
+  console.log({ task, label, firstTask, secondTask, stimuli, numbers });
 
   instructionText = `<p>This experiment consists of 4 sections.<br>
         Each section will include a few practice trials followed by around 30 real trials.<br><br>

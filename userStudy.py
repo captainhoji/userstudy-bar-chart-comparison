@@ -178,45 +178,23 @@ def initializeTask():
     first_task = data.get('first_task', None)
     second_task = data.get('second_task', None)
     task = 'compare_length'
-    
+
     global participantCounter
 
     # Assigning conditions
     if not first_task or first_task == "None":
         if participantCounter % 2 == 0:
-            first_task = "darkest"
+            first_task = ["darkest", "darkest", "lightest", "lightest"]
         elif participantCounter % 2 == 1:
-            first_task = "lightest"
+            first_task = ["lightest", "lightest", "darkest", "darkest"]
     if not second_task or second_task == "None":
         if participantCounter % 2 == 0:
-            second_task = "longer"
+            second_task = ["longer", "shorter", "longer", "shorter"]
         elif participantCounter % 2 == 1:
-            second_task = "shorter"
+            second_task = ["shorter", "longer", "shorter", "longer"]
     
-    layout = 'horizontal'
-    orientation = 'vertical'
-
-    # if task == "compare_height":
-    #     if random.random() < 1/2:
-    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-    #     else:
-    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-    # elif task == "compare_length":
-    #     if random.random() < 1/2:
-    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-    #     else:
-    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-    #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-    # elif task == "compare_index":
-    #     if random.random() < 3/7:
-    #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-    #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-    #     else:
-    #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-    #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-
+    layout = ['horizontal'] * 4
+    orientation = ['vertical'] * 4
 
     participantCounter += 1
 
@@ -245,9 +223,11 @@ def initializeTask():
         "orientation": orientation,
         "layout": layout,
         "label": [False] * 4,
-        "stimuli": shuffled_stimuli,
+        "stimuli": stimuli, # shuffled_stimuli,
         "practice_easy": practice_easy,
-        "numbers": shuffled_index
+        "numbers": shuffled_index,
+        "first_task": first_task,
+        "second_task": second_task
     }
     return jsonify(conditions)
 
@@ -326,16 +306,28 @@ def insert_row(cursor, table, fields, values):
     sql = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})"
     cursor.execute(sql, values)
 
-def validate_orientationStr(code):
+def validate_firstTaskStr(code):
     if code and len(code) == 4:
         for ch in code:
-            if ch != 'v' and ch != 'h':
+            if ch != 'd' and ch != 'l':
                 return False
         return True
     return False
 
-def decode_orientation(code: str) -> list:
-    mapping = {'v': 'vertical', 'h': 'horizontal'}
+def decode_firstTaskStr(code: str) -> list:
+    mapping = {'d': 'darkest', 'l': 'lightest'}
+    return [mapping[char] for char in code]
+
+def validate_secondTaskStr(code):
+    if code and len(code) == 4:
+        for ch in code:
+            if ch != 'l' and ch != 's':
+                return False
+        return True
+    return False
+
+def decode_secondTaskStr(code: str) -> list:
+    mapping = {'l': 'longer', 's': 'shorter'}
     return [mapping[char] for char in code]
 
 if __name__ == '__main__':

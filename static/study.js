@@ -11,6 +11,8 @@ let config = {
   task: null,
   layout: [],
   label: [],
+  firstTask: [],
+  secondTask: [],
   orientation: [],
   stimuli: [],
   practiceEasy: [],
@@ -80,7 +82,7 @@ function initializeTrialBlock(practice = true, easyPractice = false) {
   showInstructionsOverlay();
 
   if (easyPractice) {
-    shuffle(config.practiceEasy);
+    // shuffle(config.practiceEasy);
     config.consecutiveCorrects = 0;
     config.blockLength = 30;
   } else if (practice) {
