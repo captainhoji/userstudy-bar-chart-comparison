@@ -58,15 +58,11 @@ def get_db_connection():
 # Instructions page
 @app.route('/')
 def instructions():
-<<<<<<< Updated upstream
-    return render_template('consent.html')
-=======
     task = request.args.get('task')
     orientationStr = request.args.get('orientation')
     layoutStr = request.args.get('layout')
     chartType = request.args.get('chartType')
     return render_template('consent.html', task=task, orientationStr=orientationStr, layoutStr=layoutStr, chartType=chartType)
->>>>>>> Stashed changes
 
 # Instructions page
 @app.route('/verification')
@@ -147,17 +143,12 @@ def submit_survey():
 
 @app.route('/task')
 def task():
-<<<<<<< Updated upstream
-    participant_id = request.args.get('participant_id')
-    return render_template("task.html", participant_id=participant_id)  # Redirect to the task page
-=======
     participant_id = request.args.get('participant_id', '')
     task = request.args.get('task', '')
     orientationStr = request.args.get('orientation', '')
     layoutStr = request.args.get('layout', '')
     chartType = request.args.get('chartType', '')
     return render_template("task.html", participant_id=participant_id, task=task, orientationStr = orientationStr, layoutStr = layoutStr, chartType = chartType)  # Redirect to the task page
->>>>>>> Stashed changes
 
 @app.route('/follow_up', methods=['GET'])
 def followup():
@@ -188,135 +179,80 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
-<<<<<<< Updated upstream
-=======
     task = data['task']
     layoutStr = data['layoutStr']
     orientationStr = data['orientationStr']
     chartType = data['chartType']
->>>>>>> Stashed changes
 
-    if data['message'] == 'initialize':
 
-        label = [False, True]
-        orientation = ['horizontal', 'vertical']
-        whatToAlterFirst = 'orientation'
-        global participantCounter
+    if not chartType or chartType == "None":
+        chartType = "floating_bar" # floating bar is the default chart type that u see if no chart type is specified.
 
-        # Assigning conditions
-        if participantCounter % 2 == 0:
-            task = "compare_highest"
-        else:
-            task = "compare_index"
 
-        label_idx = (participantCounter//2)%2
-        orientation_idx = (participantCounter//4)%2
+    label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
+    orientation = [orientation[i] for i in [orientation_idx, 1-orientation_idx, orientation_idx, 1-orientation_idx]]
 
-<<<<<<< Updated upstream
-        # Assigning conditions constrained
-        # task = "compare_index"
-        # if random.random() < 0.5:
-        #     label_idx = 0
-        # else:
-        #     label_idx = 1             
-        # if random.random() < 0.5:
-        #     orientation_idx = 0
-        # else:
-        #     orientation_idx = 1
-=======
-        if not chartType or chartType == "None":
-            chartType = "floating_bar" # floating bar is the default chart type that u see if no chart type is specified.
+    participantCounter += 1
 
-        # if task == "compare_height":
-        #     if random.random() < 1/2:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-        #     else:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        # elif task == "compare_length":
-        #     if random.random() < 1/2:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
-        #     else:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-        # elif task == "compare_index":
-        #     if random.random() < 3/7:
-        #         layout = ["vertical", "horizontal", "vertical", "horizontal"]
-        #         orientation = ["vertical", "vertical", "horizontal", "horizontal"]
-        #     else:
-        #         layout = ["horizontal", "vertical", "horizontal", "vertical"]
-        #         orientation = ["horizontal", "horizontal", "vertical", "vertical"]
->>>>>>> Stashed changes
+    '''
+    Add stimuli
+    '''
+    stimuli_per_block = 20
+    stimuli_copy = list(zip(stimuli[:], range(len(stimuli))))
+    random.shuffle(stimuli_copy)
+    stimuli_shuffled, indexes_shuffled = map(list, zip(*stimuli_copy))
 
-        label = [label[i] for i in [label_idx, label_idx, 1-label_idx, 1-label_idx]]
-        orientation = [orientation[i] for i in [orientation_idx, 1-orientation_idx, orientation_idx, 1-orientation_idx]]
+    # swap the answer position with 50% chance
+    for i, s in enumerate(stimuli_shuffled):
+        if random.random() < 0.5:
+            s[0], s[1] = s[1], s[0]
+            s[2] = 3-s[2]
+            s[3] = 3-s[3]
+            indexes_shuffled[i] *= -1
+    stimuliblocks = [stimuli_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
+    stimulinumbers = [indexes_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
 
-        participantCounter += 1
+    '''
+    Add validation stimuli
+    '''
+    '''
+    validation_per_block = 5
 
-        '''
-        Add stimuli
-        '''
-        stimuli_per_block = 20
-        stimuli_copy = list(zip(stimuli[:], range(len(stimuli))))
-        random.shuffle(stimuli_copy)
-        stimuli_shuffled, indexes_shuffled = map(list, zip(*stimuli_copy))
+    if task == "compare_highest":
+        validation_checks = validation_stimuli_compare_height
+    elif task == "compare_index":
+        validation_checks = validation_stimuli_compare_index
 
-        # swap the answer position with 50% chance
-        for i, s in enumerate(stimuli_shuffled):
-            if random.random() < 0.5:
-                s[0], s[1] = s[1], s[0]
-                s[2] = 3-s[2]
-                s[3] = 3-s[3]
-                indexes_shuffled[i] *= -1
-        stimuliblocks = [stimuli_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
-        stimulinumbers = [indexes_shuffled[i*stimuli_per_block:(i+1)*stimuli_per_block] for i in range(4)]
+    random.shuffle(validation_checks)
+    j = 0 # validation stimuli counter
+    for i in range(len(stimuliblocks)):
+        validation_check_indexes = random.sample(range(1, stimuli_per_block+validation_per_block), validation_per_block)
+        validation_check_indexes.sort()
+        for pos in validation_check_indexes:
+            stimuliblocks[i].insert(pos, validation_checks[j])
+            stimulinumbers[i].insert(pos, 999) #999 is the code for validation check stimuli
+            j += 1
+    '''
+    '''
+    Add easy practice stimuli
+    '''
+    if task == "compare_highest":
+        practice_easy = practice_stimuli_compare_height
+    elif task == "compare_index":
+        practice_easy = practice_stimuli_compare_index
+    random.shuffle(practice_easy)
 
-        '''
-        Add validation stimuli
-        '''
-        '''
-        validation_per_block = 5
-
-        if task == "compare_highest":
-            validation_checks = validation_stimuli_compare_height
-        elif task == "compare_index":
-            validation_checks = validation_stimuli_compare_index
-
-        random.shuffle(validation_checks)
-        j = 0 # validation stimuli counter
-        for i in range(len(stimuliblocks)):
-            validation_check_indexes = random.sample(range(1, stimuli_per_block+validation_per_block), validation_per_block)
-            validation_check_indexes.sort()
-            for pos in validation_check_indexes:
-                stimuliblocks[i].insert(pos, validation_checks[j])
-                stimulinumbers[i].insert(pos, 999) #999 is the code for validation check stimuli
-                j += 1
-        '''
-        '''
-        Add easy practice stimuli
-        '''
-        if task == "compare_highest":
-            practice_easy = practice_stimuli_compare_height
-        elif task == "compare_index":
-            practice_easy = practice_stimuli_compare_index
-        random.shuffle(practice_easy)
-
-        conditions = {
-            "task": task,
-<<<<<<< Updated upstream
-            "label": label,
-=======
-            "chartType": chartType,
->>>>>>> Stashed changes
-            "orientation": orientation,
-            "whatToAlterFirst": whatToAlterFirst,
-            "stimuli": stimuliblocks,
-            # "practice": practiceblocks,
-            "practice_easy": practice_easy,
-            "numbers": stimulinumbers
-        }
-        return jsonify(conditions)
+    conditions = {
+        "task": task,
+        "chartType": chartType,
+        "orientation": orientation,
+        "whatToAlterFirst": whatToAlterFirst,
+        "stimuli": stimuliblocks,
+        # "practice": practiceblocks,
+        "practice_easy": practice_easy,
+        "numbers": stimulinumbers
+    }
+    return jsonify(conditions)
 
 @app.route('/get_practice')
 def getPracticeBlock():
@@ -347,32 +283,8 @@ def save_response():
     # number: number
     # duration: duration
     data = request.get_json()
-<<<<<<< Updated upstream
-    participant_id = data['participant_id']
-    task = data['task']
-    response = data['response']
-    correct = data['correct']
-    trial_number = data['order']
-    time_when = data['time_when']
-    orientation = data['orientation']
-    label = data['label']
-    stimuli_data = data['stimuli']
-    duration = data['duration']
-    stimuli_number = data['number']
-
-    stimuli_str = " ".join(str(x) for x in stimuli_data[0]) + "," + " ".join(str(x) for x in stimuli_data[1])
-    if task == "compare_highest":
-        task = 0
-    else:
-        task = 1
-    if orientation == "horizontal":
-        orientation = 0
-    else:
-        orientation = 1
-=======
     fields = ["participant_id", "task", "layout", "orientation", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when", "chart_type"]
     values = [data[field] for field in fields]
->>>>>>> Stashed changes
 
     conn = get_db_connection()
     if conn:
@@ -389,23 +301,9 @@ def save_response():
 @app.route("/save_practiceFail", methods=['POST'])
 def save_practiceFail():
     data = request.get_json()
-<<<<<<< Updated upstream
-    participant_id = data['participant_id']
-    orientation = data['orientation']
-    label = data['label']
-    task = data['task']
-    if task == "compare_highest":
-        task = 0
-    else:
-        task = 1
-    if orientation == "horizontal":
-        orientation = 0
-    else:
-        orientation = 1
-=======
+
     fields = ["participant_id", "task", "layout", "orientation", "chart_type"]
     values = [data[field] for field in fields]
->>>>>>> Stashed changes
 
     conn = get_db_connection()
     if conn:
@@ -414,11 +312,7 @@ def save_practiceFail():
                        (participant_id, task, orientation, label))
         conn.commit()
         conn.close()
-<<<<<<< Updated upstream
-        print(f'participant {participant_id} failed easy practice on {task}, {orientation}, {label}. Data saved.')
-=======
         print(f"participant {data['participant_id']} failed easy practice on {data['task']}, {data['layout']}, {data['label']}, {data['chart_type']}. Data saved.")
->>>>>>> Stashed changes
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400
