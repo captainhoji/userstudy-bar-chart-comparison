@@ -62,7 +62,7 @@ def instructions():
 
 # Verification page
 @app.route('/verification')
-def verificaiton():
+def verification():
     return render_template('verification.html')
 
 # Survey page
