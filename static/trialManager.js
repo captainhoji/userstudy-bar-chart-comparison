@@ -2,14 +2,13 @@ import { stopTimer } from './utils.js';
 
 export async function saveResponseToServer({
   participantId,
-  task,
+  firstTask,
+  secondTask,
+  answerBrightness,
   response,
   correct,
   trialNumber,
   timeWhen,
-  layout,
-  orientation,
-  label,
   stimuliNumber,
   duration
 }) {
@@ -19,14 +18,13 @@ export async function saveResponseToServer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
-        task,
+        first_task: firstTask,
+        second_task: secondTask,
+        answer_brightness: answerBrightness,
         response,
         correct,
         trial_number: trialNumber,
         time_when: timeWhen,
-        layout,
-        orientation,
-        label,
         stimuli_number: stimuliNumber,
         duration
       })
@@ -43,6 +41,7 @@ export async function getPracticeData() {
       headers: { 'Content-Type': 'application/json' }
     });
     const data = await res.json();
+    console.log(data.practice);
     return data.practice;
   } catch (err) {
     console.error('Error fetching practice data:', err);

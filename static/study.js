@@ -8,7 +8,6 @@ import { addKeyHandlers, removeKeyHandlers } from './events.js';
 
 let config = {
   participantId: null,
-  task: null,
   layout: [],
   label: [],
   firstTask: [],
@@ -22,7 +21,9 @@ let config = {
   current: {
     layout: 'horizontal',
     label: false,
-    orientation: false
+    orientation: 'vertical',
+    firstTask: null,
+    secondTask: null
   },
   isPractice: true,
   isEasyPractice: true,
@@ -34,22 +35,24 @@ let config = {
   startTime: null
 };
 
-export async function initializeStudy(participantId, task, orientationStr, layoutStr) {
+export async function initializeStudy(participantId, firstTask, secondTask) {
   config.participantId = participantId;
-  config.task = task;
+  config.firstTask = firstTask;
+  config.secondTask = secondTask;
 
   const response = await fetch('/initialize_task', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ participant_id: participantId, task, orientationStr, layoutStr, message: "initialize" })
+    body: JSON.stringify({ participant_id: participantId, first_task: firstTask, second_task: secondTask, message: "initialize" })
   });
 
   const data = await response.json();
   Object.assign(config, {
-    task: data.task,
+    firstTask: data.first_task,
+    secondTask: data.second_task,
     label: data.label,
-    orientation: data.orientation,
     layout: data.layout,
+    orientation: data.orientation,
     stimuli: data.stimuli,
     practiceEasy: data.practice_easy,
     numbers: data.numbers,
@@ -57,7 +60,7 @@ export async function initializeStudy(participantId, task, orientationStr, layou
     blockCounter: 0
   });
 
-  console.log(`task: ${config.task}\nlayout: ${config.layout}\norientation: ${config.orientation}`);
+  console.log(`firstTask: ${config.firstTask}\nsecondTask: ${config.secondTask}\nlayout: ${config.layout}\norientation: ${config.orientation}`);
 
   const instructionsHTML = getStudyInstructionsHTML(config);
   document.getElementById("instruction-text").innerHTML = instructionsHTML;
@@ -74,9 +77,11 @@ function initializeTrialBlock(practice = true, easyPractice = false) {
   config.current.layout = config.layout[config.blockCounter];
   config.current.label = config.label[config.blockCounter];
   config.current.orientation = config.orientation[config.blockCounter];
+  config.current.firstTask = config.firstTask[config.blockCounter];
+  config.current.secondTask = config.secondTask[config.blockCounter];
 
   const titleContainer = document.getElementById('section-title');
-  titleContainer.innerHTML = `Instructions: Section ${config.blockCounter + 1} of 4`;
+  titleContainer.innerHTML = `Instructions: Section ${config.blockCounter + 1}`;
   const instructionText = getTrialBlockInstructionsHTML(config);
   document.getElementById('instruction-text').innerHTML = instructionText;
   showInstructionsOverlay();
@@ -122,10 +127,8 @@ function handleNext(isCorrect) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           participant_id: participantId,
-          task: config.task,
-          layout: config.current.layout,
-          orientation: config.current.orientation,
-          label: config.current.label
+          first_task: config.firstTask,
+          second_task: config.secondTask
         })
       });
     }
@@ -145,7 +148,7 @@ function handleNext(isCorrect) {
   } else {
     if (isLastTrial) {
       config.blockCounter++;
-      if (config.blockCounter === 4) {
+      if (config.blockCounter === config.stimuli.length) {
         // window.location.href = `/follow_up?participant_id=${config.participantId}`;
         window.location.href = `/thank_you`;
       } else {

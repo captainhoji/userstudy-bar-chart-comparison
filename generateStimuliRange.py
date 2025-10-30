@@ -121,6 +121,7 @@ def createBarChartArray(darkest_bar_length, darkest_bar_index, lightest_bar_leng
 	if volume_chart1 == 0:
 		bar_lengths = random.sample(range(config.min_bar_length, config.max_bar_length+1), config.num_of_bars-2)
 	else:
+		# while True:
 		bar_lengths = []
 		remaining_volume = volume_chart1 - darkest_bar_length - lightest_bar_length
 		for i in range(config.num_of_bars - 3):
@@ -132,6 +133,8 @@ def createBarChartArray(darkest_bar_length, darkest_bar_index, lightest_bar_leng
 			length = np.random.uniform(min_possible, max_possible)
 			bar_lengths.append(length)
 			remaining_volume -= length
+			# if config.min_bar_length <= remaining_volume and remaining_volume <= config.max_bar_length:
+			# 	break
 
 		# Assign the last bar to exactly match the remaining volume
 		bar_lengths.append(remaining_volume)
@@ -151,36 +154,51 @@ def createBarChartArray(darkest_bar_length, darkest_bar_index, lightest_bar_leng
 	return bars, volume
 
 def generateTaskStimuli(config: StimuliConfig):
-	darkest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
-	darkest_shorter_bar_length = darkest_longer_bar_length * (1 - config.delta_length)
-	lightest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
-	lightest_shorter_bar_length = lightest_longer_bar_length * (1 - config.delta_length)
+	while True:
+		darkest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
+		darkest_shorter_bar_length = darkest_longer_bar_length * (1 - config.delta_length)
+		lightest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
+		lightest_shorter_bar_length = lightest_longer_bar_length * (1 - config.delta_length)
 
-	indexes_extrema_arr1 = random.sample(range(1, config.num_of_bars - 1), 2)
-	indexes_extrema_arr2 = random.sample(range(1, config.num_of_bars - 1), 2)
+		indexes_extrema_arr1 = random.sample(range(1, config.num_of_bars - 1), 2)
+		indexes_extrema_arr2 = random.sample(range(1, config.num_of_bars - 1), 2)
 
-	arr1_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 1 else darkest_shorter_bar_length
-	arr1_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 1 else lightest_shorter_bar_length
-	arr2_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 2 else darkest_shorter_bar_length
-	arr2_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 2 else lightest_shorter_bar_length
+		arr1_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 1 else darkest_shorter_bar_length
+		arr1_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 1 else lightest_shorter_bar_length
+		arr2_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 2 else darkest_shorter_bar_length
+		arr2_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 2 else lightest_shorter_bar_length
 
-	arr1, volume_arr1 = createBarChartArray(arr1_darkest_length, indexes_extrema_arr1[0], arr1_lightest_length, indexes_extrema_arr1[1], config)
-	arr2, _ = createBarChartArray(arr2_darkest_length, indexes_extrema_arr2[0], arr2_lightest_length, indexes_extrema_arr2[1], config, volume_chart1 = volume_arr1)
+		arr1, volume_arr1 = createBarChartArray(arr1_darkest_length, indexes_extrema_arr1[0], arr1_lightest_length, indexes_extrema_arr1[1], config)
+		arr2, _ = createBarChartArray(arr2_darkest_length, indexes_extrema_arr2[0], arr2_lightest_length, indexes_extrema_arr2[1], config, volume_chart1 = volume_arr1)
+
+		omg = False
+		for bar in arr1:
+			if config.min_bar_length > (bar[1]-bar[0]) or (bar[1]-bar[0]) > config.max_bar_length:
+				print(bar[1]-bar[0])
+				omg = True
+				break
+		for bar in arr2:
+			if config.min_bar_length > (bar[1]-bar[0]) or (bar[1]-bar[0]) > config.max_bar_length:
+				print(bar[1]-bar[0])
+				omg = True
+				break
+		if not omg:
+			break
 
 	# for output purposes so that front end does not need to calcualte which bars are the darkest/lightest
-	indexes_darkest = [indexes_extrema_arr1[0], indexes_extrema_arr2[0]]
-	indexes_lightest = [indexes_extrema_arr1[1], indexes_extrema_arr2[1]]
+	indexes_darkest = [indexes_extrema_arr1[0], indexes_extrema_arr2[0]] # [darkest bar of arr1, darkest bar of arr2]
+	indexes_lightest = [indexes_extrema_arr1[1], indexes_extrema_arr2[1]] # [lightest bar of arr1, lightest bar of arr2]
 	brightness_default = 3
 
 	for sublist in arr1: sublist.append(brightness_default)
 	for sublist in arr2: sublist.append(brightness_default)
 	
-	brightness_darkest = random.randint(brightness_default + config.salience_brightness + config.delta_brightness, 7)
+	brightness_darkest = random.randint(brightness_default + config.salience_brightness + config.delta_brightness, 6)
 	brightness_second_darkest = brightness_darkest - config.delta_brightness
 	arr1[indexes_extrema_arr1[0]][2] = brightness_darkest if config.darkest_darker_side == 1 else brightness_second_darkest
 	arr2[indexes_extrema_arr2[0]][2] = brightness_second_darkest if config.darkest_darker_side == 1 else brightness_darkest
 
-	brightness_lightest = random.randint(0, brightness_default - config.salience_brightness - config.delta_brightness + 1)
+	brightness_lightest = random.randint(0, brightness_default - config.salience_brightness - config.delta_brightness)
 	brightness_second_lightest = brightness_lightest + config.delta_brightness
 	arr1[indexes_extrema_arr1[1]][2] = brightness_lightest if config.lightest_darker_side == 2 else brightness_second_lightest
 	arr2[indexes_extrema_arr2[1]][2] = brightness_second_lightest if config.lightest_darker_side == 2 else brightness_lightest

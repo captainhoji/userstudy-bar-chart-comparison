@@ -10,8 +10,8 @@ export function drawBarChart({
   let data = values.map((value, index) => ({
     category: `${index + 1}`,
     start: value[0],
-    end: value[0] + value[1],
-    color: (value[2]-1) * 100/6,
+    end: value[1],
+    color: value[2] * 100/6,
     layerLow: 1,
     layerHigh: index === redIndex ? 99 : 0
   }));
@@ -30,8 +30,6 @@ export function drawBarChart({
       "rgba(222,235,247,1)","rgba(198,219,239,1)","rgba(158,202,225,1)","rgba(107,174,214,1)","rgba(66,146,198,1)","rgba(33,113,181,1)","rgba(8,69,148,1)"
     ]
   };
-
-  colorPalettes.blues.reverse();
 
   return {
     "$schema": "https://vega.github.io/schema/vega-lite/v5.json",

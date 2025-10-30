@@ -68,17 +68,14 @@
 
 </body>
 <script>
-    const task = "{{ task }}" 
-    const orientationStr = "{{ orientationStr }}"
-    const layoutStr = "{{ layoutStr }}"
+    const first_task = "{{ first_task }}"
+    const second_task = "{{ second_task }}" 
 
-    console.log(task);
-    console.log(orientationStr);
-    console.log(layoutStr);
+    console.log(first_task);
+    console.log(second_task);
 
-    localStorage.setItem("task", task);
-    localStorage.setItem("orientationStr", orientationStr);
-    localStorage.setItem("layoutStr", layoutStr);
+    localStorage.setItem("first_task", first_task);
+    localStorage.setItem("second_task", second_task);
 
     document.getElementById("consentCheck").addEventListener("change", function() {
         document.getElementById("continueBtn").disabled = !this.checked;

@@ -23,7 +23,7 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli_range'
+stimuliDir = 'stimuli_bias'
 
 participantCounter = 0
 
@@ -56,10 +56,9 @@ def get_db_connection():
 # Instructions page
 @app.route('/')
 def instructions():
-    task = request.args.get('task')
-    orientationStr = request.args.get('orientation')
-    layoutStr = request.args.get('layout')
-    return render_template('consent.html', task=task, orientationStr=orientationStr, layoutStr=layoutStr)
+    first_task = request.args.get('first_task')
+    second_task = request.args.get('second_task')
+    return render_template('consent.html', first_task=first_task, second_task=second_task)
 
 # Verification page
 @app.route('/verification')
@@ -79,14 +78,14 @@ def prolific_id():
         cursor = conn.cursor()
 
         # Check if participant_id exists
-        cursor.execute("SELECT COUNT(*) FROM Participant WHERE participant_id = ?", (participant_id,))
+        cursor.execute("SELECT COUNT(*) FROM Participant_bias WHERE participant_id = ?", (participant_id,))
         result = cursor.fetchone()
         print("result: ", result)
 
         if result[0] == 0:
             # New participant
             # Participant not found in db, so insert into table
-            cursor.execute("INSERT INTO Participant (participant_id) VALUES (?)", (participant_id,))
+            cursor.execute("INSERT INTO Participant_bias (participant_id) VALUES (?)", (participant_id,))
             conn.commit()
             conn.close()
             print(f"Participant '{participant_id}' added.")
@@ -141,10 +140,9 @@ def submit_survey():
 @app.route('/task')
 def task():
     participant_id = request.args.get('participant_id', '')
-    task = request.args.get('task', '')
-    orientationStr = request.args.get('orientation', '')
-    layoutStr = request.args.get('layout', '')
-    return render_template("task.html", participant_id=participant_id, task=task, orientationStr = orientationStr, layoutStr = layoutStr)  # Redirect to the task page
+    first_task = request.args.get('first_task')
+    second_task = request.args.get('second_task')
+    return render_template("task.html", participant_id=participant_id, first_task=first_task, second_task=second_task)  # Redirect to the task page
 
 @app.route('/follow_up', methods=['GET'])
 def followup():
@@ -175,38 +173,40 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
-    first_task = data.get('first_task', None)
-    second_task = data.get('second_task', None)
-    task = 'compare_length'
+    first_task_str = data.get('first_task', None)
+    second_task_str = data.get('second_task', None)
 
     global participantCounter
 
     # Assigning conditions
-    if not first_task or first_task == "None":
+    if validate_firstTaskStr(first_task_str):
+        first_task = decode_firstTaskStr(first_task_str)
+    else:
         if participantCounter % 2 == 0:
             first_task = ["darkest", "darkest", "lightest", "lightest"]
         elif participantCounter % 2 == 1:
             first_task = ["lightest", "lightest", "darkest", "darkest"]
-    if not second_task or second_task == "None":
+    if validate_secondTaskStr(second_task_str):
+        second_task = decode_secondTaskStr(second_task_str)
+    else:
         if participantCounter % 2 == 0:
             second_task = ["longer", "shorter", "longer", "shorter"]
         elif participantCounter % 2 == 1:
             second_task = ["shorter", "longer", "shorter", "longer"]
-    
-    layout = ['horizontal'] * 4
-    orientation = ['vertical'] * 4
+
+    layout = ['horizontal'] * len(first_task)
+    orientation = ['vertical'] * len(first_task)
 
     participantCounter += 1
 
     # Add Stimuli
     indexes_shuffled = []
-    difficulty_levels = 2
     stimuli_per_block = 32
 
     shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
     for i in range(4):
         for idx in shuffled_index[i]:
-            assert(idx < 32*(i+1))
+            assert(idx < stimuli_per_block*(i+1))
 
     # Inject Engagement Checks
     random.shuffle(validation_stimuli)
@@ -219,15 +219,14 @@ def initializeTask():
     Add easy practice stimuli
     '''
     conditions = {
-        "task": task,
-        "orientation": orientation,
-        "layout": layout,
-        "label": [False] * 4,
-        "stimuli": stimuli, # shuffled_stimuli,
-        "practice_easy": practice_easy,
-        "numbers": shuffled_index,
         "first_task": first_task,
-        "second_task": second_task
+        "second_task": second_task,
+        "label": [False] * len(first_task),
+        "layout": layout,
+        "orientation": orientation,
+        "stimuli": shuffled_stimuli[:len(first_task)],
+        "practice_easy": practice_easy,
+        "numbers": shuffled_index[:len(first_task)]
     }
     return jsonify(conditions)
 
@@ -244,13 +243,13 @@ def getPracticeBlock():
 @app.route('/save_response', methods=['POST'])
 def save_response():
     data = request.get_json()
-    fields = ["participant_id", "task", "layout", "orientation", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when"]
+    fields = ["participant_id", "first_task", "second_task", "answer_brightness", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when"]
     values = [data[field] for field in fields]
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        insert_row(cursor, "Trial_blue", fields, values)
+        insert_row(cursor, "Trial_bias", fields, values)
         conn.commit()
         conn.close()
         return jsonify({'message': 'Response saved successfully'}), 200
@@ -260,16 +259,16 @@ def save_response():
 @app.route("/save_practiceFail", methods=['POST'])
 def save_practiceFail():
     data = request.get_json()
-    fields = ["participant_id", "task", "layout", "orientation"]
+    fields = ["participant_id", "first_task", "second_task"]
     values = [data[field] for field in fields]
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        insert_row(cursor, "Practice_fail_range", fields, values)
+        insert_row(cursor, "Practice_fail_bias", fields, values)
         conn.commit()
         conn.close()
-        print(f"participant {data['participant_id']} failed easy practice on {data['task']}, {data['layout']}, {data['label']}. Data saved.")
+        print(f"participant {data['participant_id']} failed easy practice on {data['first_task']}, {data['second_task']}. Data saved.")
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400
@@ -307,7 +306,7 @@ def insert_row(cursor, table, fields, values):
     cursor.execute(sql, values)
 
 def validate_firstTaskStr(code):
-    if code and len(code) == 4:
+    if code and (len(code) == 1 or len(code) == 4):
         for ch in code:
             if ch != 'd' and ch != 'l':
                 return False
@@ -319,7 +318,7 @@ def decode_firstTaskStr(code: str) -> list:
     return [mapping[char] for char in code]
 
 def validate_secondTaskStr(code):
-    if code and len(code) == 4:
+    if code and (len(code) == 1 or len(code) == 4):
         for ch in code:
             if ch != 'l' and ch != 's':
                 return False

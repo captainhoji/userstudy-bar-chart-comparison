@@ -8,6 +8,7 @@ import { addKeyHandlers } from './events.js';
 let config = null;
 let trialData = null;
 let correctAnswer = null;
+let answerBrightness = null;
 let onNext = null;
 let isChartDisplayed = false;
 
@@ -22,22 +23,31 @@ export function loadTrial() {
   if (config.isEasyPractice) {
     trialData = config.practiceEasy[config.trialCounter];
     console.log(`loading easy practice trial ${config.trialCounter + 1}`);
+  } else if (config.isPractice) { // LOOK HERE!!
+    trialData = config.stimuliBlock[config.trialCounter]
+    console.log(`loading practice trial ${config.trialCounter + 1} of block ${config.blockCounter + 1}`);
   } else {
-    trialData = config.stimuli[config.blockCounter][config.trialCounter];
-    console.log(`loading ${config.isPractice ? 'practice' : 'real'} trial ${config.trialCounter + 1} of block ${config.blockCounter + 1}`);
-    console.log(`number: ` + config.numbers[config.blockCounter][config.trialCounter]);
+    trialData = config.stimuliBlock[config.trialCounter];
+    console.log(`loading real trial ${config.trialCounter + 1} of block ${config.blockCounter + 1}`);
   }
 
   correctAnswer = {
-    compare_height: trialData[4],
-    compare_index: trialData[3],
-    compare_length: trialData[2]
-  }[config.task];
+    darkest: {longer: trialData[2], shorter: 3-trialData[2]},
+    lightest: {longer: trialData[4], shorter: 3-trialData[4]}
+  }[config.current.firstTask][config.current.secondTask];
+
+  if ((config.firstTask == 'darkest' && correctAnswer == trialData[3]) || 
+    (config.firstTask == 'lightest' && correctAnswer == trialData[5])) {
+    answerBrightness = 'darker';
+  } else {
+    answerBrightness = 'lighter';
+  }
 
   displayCrosshair(500, () => {
     displayCharts({
       data: trialData,
-      task: config.task,
+      firstTask: config.current.firstTask,
+      secondTask: config.current.secondTask,
       correctAnswer,
       layout: config.current.layout,
       orientation: config.current.orientation,
@@ -76,32 +86,22 @@ function handleResponse(response) {
     highlightDarkestBars();
 
     const explanationContainer = document.getElementById('controls-instruction');
-    const answer = {
-      compare_height: trialData[4],
-      compare_index: trialData[3],
-      compare_length: trialData[2]
-    }[config.task];
 
     const direction1 = config.current.layout === "horizontal" ? "left" : "top";
     const direction2 = config.current.layout === "horizontal" ? "right" : "bottom";
-    const correctDirection = answer === 1 ? direction1 : direction2;
-    const incorrectDirection = answer === 1 ? direction2 : direction1;
+    const correctDirection = correctAnswer === 1 ? direction1 : direction2;
+    const incorrectDirection = correctAnswer === 1 ? direction2 : direction1;
 
-    let explanation = `The answer is the <b>${correctDirection}</b> chart because its darkest bar `;
-    if (config.task === "compare_height") {
-      if (config.current.orientation == "vertical") {
-        explanation += `reaches higher. `;
-      } else {
-        explanation += `reaches farther to the right. `;
-      }
-    } else if (config.task === "compare_index") {
-      if (config.current.orientation == "vertical") {
-        explanation += `is positioned farther to the right side in its chart. `;
-      } else {
-        explanation += `is positioned higher in its chart. `;
-      }
-    } else if (config.task === "compare_length") {
+    let explanation = `The answer is the <b>${correctDirection}</b> chart `;
+    if (config.current.firstTask === "darkest") {
+      explanation += `because its darkest bar `;
+    } else {
+      explanation += `because its lightest bar `;
+    }
+    if (config.current.secondTask === "longer") {
       explanation += `is longer. `;
+    } else {
+      explanation += `is shorter. `
     }
     explanation += '<br>Please press the <b>spacebar</b> for the next trial.';
 
@@ -129,14 +129,13 @@ function handleResponse(response) {
         const now = new Date();
         saveResponseToServer({
           participantId: config.participantId,
-          task: config.task,
+          firstTask: config.current.firstTask,
+          secondTask: config.current.secondTask,
+          answerBrightness: answerBrightness,
           response,
           correct: isCorrect ? 1 : 0,
           trialNumber: config.trialCounter,
           timeWhen: now,
-          layout: config.current.layout,
-          orientation: config.current.orientation,
-          label: config.current.label,
           stimuliNumber: config.numbers[config.blockCounter][config.trialCounter],
           duration
         });

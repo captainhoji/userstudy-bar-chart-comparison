@@ -1,3 +1,3 @@
 import { initializeStudy } from './study.js';
 
-initializeStudy(participantId, task, orientationStr, layoutStr);
+initializeStudy(participantId, first_task, second_task);

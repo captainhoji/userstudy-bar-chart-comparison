@@ -28,21 +28,17 @@
 
     <script>
         let participantId = "{{ participant_id }}";
-        let task = "{{ task }}" 
-        let orientationStr = "{{ orientationStr }}"
-        let layoutStr = "{{ layoutStr }}"
+        let first_task = "{{ first_task }}"
+        let second_task = "{{ second_task }}" 
 
         if (!participantId) {
           participantId = localStorage.getItem("participantId");
         }
-        if (!task) {
-          task = localStorage.getItem("task");
+        if (!first_task) {
+          first_task = localStorage.getItem("first_task");
         }
-        if (!orientationStr) {
-          orientationStr = localStorage.getItem("orientationStr");
-        }
-        if (!layoutStr) {
-          layoutStr = localStorage.getItem("layoutStr");
+        if (!second_task) {
+          second_task = localStorage.getItem("second_task");
         }
         
         function goFullscreen() {
