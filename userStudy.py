@@ -42,7 +42,6 @@ with open(stimuliDir + '/validation_stimuli.pickle', 'rb') as file:
 # with open(stimuliDir + '/validation_stimuli_compare_index.pickle', 'rb') as file:
 #     validation_stimuli_compare_index = pickle.load(file)  
 
-
 # Function to establish database connection
 def get_db_connection():
     conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -140,8 +139,8 @@ def submit_survey():
 @app.route('/task')
 def task():
     participant_id = request.args.get('participant_id', '')
-    first_task = request.args.get('first_task')
-    second_task = request.args.get('second_task')
+    first_task = request.args.get('first_task', '')
+    second_task = request.args.get('second_task', '')
     return render_template("task.html", participant_id=participant_id, first_task=first_task, second_task=second_task)  # Redirect to the task page
 
 @app.route('/follow_up', methods=['GET'])
@@ -174,7 +173,7 @@ def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
     first_task_str = data.get('first_task', None)
-    second_task_str = data.get('second_task', None)
+    second_task_str = data.get('second_task', None) # l = longer, s = shorter, h = higher, w = lower
 
     global participantCounter
 
@@ -182,18 +181,19 @@ def initializeTask():
     if validate_firstTaskStr(first_task_str):
         first_task = decode_firstTaskStr(first_task_str)
     else:
-        if participantCounter % 2 == 0:
-            first_task = ["darkest", "darkest", "lightest", "lightest"]
-        elif participantCounter % 2 == 1:
-            first_task = ["lightest", "lightest", "darkest", "darkest"]
+        # if participantCounter % 2 == 0:
+        #     first_task = ["darkest", "darkest", "lightest", "lightest"]
+        # elif participantCounter % 2 == 1:
+        #     first_task = ["lightest", "lightest", "darkest", "darkest"]
+        first_task = random.sample(["darkest", "lightest"], 1)
     if validate_secondTaskStr(second_task_str):
         second_task = decode_secondTaskStr(second_task_str)
     else:
-        if participantCounter % 2 == 0:
-            second_task = ["longer", "shorter", "longer", "shorter"]
-        elif participantCounter % 2 == 1:
-            second_task = ["shorter", "longer", "shorter", "longer"]
-
+        # if participantCounter % 2 == 0:
+        #     second_task = ["taller", "shorter", "taller", "shorter"]
+        # elif participantCounter % 2 == 1:
+        #     second_task = ["shorter", "taller", "shorter", "taller"]
+        second_task = random.sample(["taller", "shorter"], 1)
     layout = ['horizontal'] * len(first_task)
     orientation = ['vertical'] * len(first_task)
 
@@ -320,13 +320,13 @@ def decode_firstTaskStr(code: str) -> list:
 def validate_secondTaskStr(code):
     if code and (len(code) == 1 or len(code) == 4):
         for ch in code:
-            if ch != 'l' and ch != 's':
+            if ch != 't' and ch != 's':
                 return False
         return True
     return False
 
 def decode_secondTaskStr(code: str) -> list:
-    mapping = {'l': 'longer', 's': 'shorter'}
+    mapping = {'t': 'taller', 's': 'shorter'}
     return [mapping[char] for char in code]
 
 if __name__ == '__main__':

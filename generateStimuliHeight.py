@@ -7,11 +7,13 @@ from dataclasses import dataclass
 
 @dataclass
 class StimuliConfig:
-	darkest_longer_side: int
+	darkest_higher_side: int
+	darkest_lower_side: int
 	darkest_darker_side: int
-	lightest_longer_side: int
+	lightest_higher_side: int
+	lightest_lower_side: int
 	lightest_darker_side: int
-	delta_length: float
+	delta: float
 	num_of_bars: int
 	min_edge_gap: float
 	min_bar_length: float = 30
@@ -25,22 +27,24 @@ min_edge_gap = 5
 stimuliDir = 'stimuli_bias'
 
 def main():
-	# delta_height, delta_index, delta_length
-	deltas = [.1, .2]
-	all_combinations = list(product([1, 2], repeat=4))
+	# delta_height, delta_index, delta
+	deltas = [5, 10]
+	all_combinations = list(product([1, 2], repeat=6))
 
 	# real task
 	stimuli = [
 		generateTaskStimuli(StimuliConfig(
-			darkest_longer_side=combo[0],
-			darkest_darker_side=combo[1],
-			lightest_longer_side=combo[2],
-			lightest_darker_side=combo[3],
-			delta_length=delta,
+			darkest_higher_side=combo[0],
+			darkest_lower_side=combo[1],
+			darkest_darker_side=combo[2],
+			lightest_higher_side=combo[3],
+			lighest_lower_side=combo[4],
+			lightest_darker_side=combo[5],
+			delta=delta,
 			num_of_bars=num_of_bars,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(8)
+		for i in range(1)
 		for combo in all_combinations
 		for delta in deltas
 	]
@@ -58,11 +62,13 @@ def main():
 	# engagement checks
 	validation_stimuli = [
 		generateTaskStimuli(StimuliConfig(
-			darkest_longer_side=combo[0],
-			darkest_darker_side=combo[1],
-			lightest_longer_side=combo[2],
-			lightest_darker_side=combo[3],
-			delta_length=.50,
+			darkest_higher_side=combo[0],
+			darkest_lower_side=combo[1],
+			darkest_darker_side=combo[2],
+			lightest_higher_side=combo[3],
+			lighest_lower_side=combo[4],
+			lightest_darker_side=combo[5],
+			delta=.50,
 			delta_brightness=0,
 			num_of_bars=num_of_bars,
 			min_bar_length=20,
@@ -79,15 +85,17 @@ def main():
 	# hard practice
 	stimuli_practice = [
 		generateTaskStimuli(StimuliConfig(
-			darkest_longer_side=combo[0],
-			darkest_darker_side=combo[1],
-			lightest_longer_side=combo[2],
-			lightest_darker_side=combo[3],
-			delta_length=delta,
+			darkest_higher_side=combo[0],
+			darkest_lower_side=combo[1],
+			darkest_darker_side=combo[2],
+			lightest_higher_side=combo[3],
+			lighest_lower_side=combo[4],
+			lightest_darker_side=combo[5],
+			delta=delta,
 			num_of_bars=num_of_bars,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(8)
+		for i in range(1)
 		for combo in all_combinations
 		for delta in deltas
 	]
@@ -98,11 +106,13 @@ def main():
 	# easy practice
 	stimuli_easy = [
 		generateTaskStimuli(StimuliConfig(
-			darkest_longer_side=combo[0],
-			darkest_darker_side=combo[1],
-			lightest_longer_side=combo[2],
-			lightest_darker_side=combo[3],
-			delta_length=.50,
+			darkest_higher_side=combo[0],
+			darkest_lower_side=combo[1],
+			darkest_darker_side=combo[2],
+			lightest_higher_side=combo[3],
+			lighest_lower_side=combo[4],
+			lightest_darker_side=combo[5],
+			delta=.50,
 			delta_brightness=1,
 			num_of_bars=num_of_bars,
 			min_bar_length=20,
@@ -110,7 +120,7 @@ def main():
 			salience_brightness=2,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(8)
+		for i in range(1)
 		for combo in all_combinations
 	]
 
@@ -155,18 +165,21 @@ def createBarChartArray(darkest_bar_length, darkest_bar_index, lightest_bar_leng
 
 def generateTaskStimuli(config: StimuliConfig):
 	while True:
-		darkest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
-		darkest_shorter_bar_length = darkest_longer_bar_length * (1 - config.delta_length)
-		lightest_longer_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
-		lightest_shorter_bar_length = lightest_longer_bar_length * (1 - config.delta_length)
+		darkest_higher_bar_ceiling = random.uniform(config.min_edge_gap, 100-config.min_edge_gap)
+		darkest_not_higher_bar_ceiling = 
+
+		darkest_higher_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
+		darkest_lower_bar_length = darkest_higher_bar_length * (1 - config.delta)
+		lightest_higher_bar_length = random.uniform(config.min_bar_length, config.max_bar_length)
+		lightest_lower_bar_length = lightest_higher_bar_length * (1 - config.delta)
 
 		indexes_extrema_arr1 = random.sample(range(1, config.num_of_bars - 1), 2)
 		indexes_extrema_arr2 = random.sample(range(1, config.num_of_bars - 1), 2)
 
-		arr1_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 1 else darkest_shorter_bar_length
-		arr1_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 1 else lightest_shorter_bar_length
-		arr2_darkest_length = darkest_longer_bar_length if config.darkest_longer_side == 2 else darkest_shorter_bar_length
-		arr2_lightest_length = lightest_longer_bar_length if config.lightest_longer_side == 2 else lightest_shorter_bar_length
+		arr1_darkest_length = darkest_higher_bar_length if config.darkest_higher_side == 1 else darkest_lower_bar_length
+		arr1_lightest_length = lightest_higher_bar_length if config.lightest_higher_side == 1 else lightest_lower_bar_length
+		arr2_darkest_length = darkest_higher_bar_length if config.darkest_higher_side == 2 else darkest_lower_bar_length
+		arr2_lightest_length = lightest_higher_bar_length if config.lightest_higher_side == 2 else lightest_lower_bar_length
 
 		arr1, volume_arr1 = createBarChartArray(arr1_darkest_length, indexes_extrema_arr1[0], arr1_lightest_length, indexes_extrema_arr1[1], config)
 		arr2, _ = createBarChartArray(arr2_darkest_length, indexes_extrema_arr2[0], arr2_lightest_length, indexes_extrema_arr2[1], config, volume_chart1 = volume_arr1)
@@ -203,7 +216,7 @@ def generateTaskStimuli(config: StimuliConfig):
 	arr1[indexes_extrema_arr1[1]][2] = brightness_lightest if config.lightest_darker_side == 2 else brightness_second_lightest
 	arr2[indexes_extrema_arr2[1]][2] = brightness_second_lightest if config.lightest_darker_side == 2 else brightness_lightest
 
-	return [arr1, arr2, config.darkest_longer_side, config.darkest_darker_side, config.lightest_longer_side, config.lightest_darker_side, indexes_darkest[:], indexes_lightest[:]]
+	return [arr1, arr2, config.darkest_higher_side, config.darkest_darker_side, config.lightest_higher_side, config.lightest_darker_side, indexes_darkest[:], indexes_lightest[:]]
 
 
 if __name__=="__main__":

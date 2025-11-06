@@ -40,7 +40,7 @@ def main():
 			num_of_bars=num_of_bars,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(8)
+		for i in range(4)
 		for combo in all_combinations
 		for delta in deltas
 	]
@@ -87,7 +87,7 @@ def main():
 			num_of_bars=num_of_bars,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(8)
+		for i in range(4)
 		for combo in all_combinations
 		for delta in deltas
 	]
@@ -150,7 +150,7 @@ def createBarChartArray(darkest_bar_length, darkest_bar_index, lightest_bar_leng
 		bar_lengths.insert(darkest_bar_index, darkest_bar_length)
 
 	volume = sum(bar_lengths) + darkest_bar_length + lightest_bar_length
-	bars = [[floor := np.random.uniform(config.min_edge_gap, 100-config.min_edge_gap-length), floor + length] for length in bar_lengths]
+	bars = [[0, length] for length in bar_lengths]
 	return bars, volume
 
 def generateTaskStimuli(config: StimuliConfig):

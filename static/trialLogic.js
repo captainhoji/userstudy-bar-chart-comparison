@@ -32,8 +32,8 @@ export function loadTrial() {
   }
 
   correctAnswer = {
-    darkest: {longer: trialData[2], shorter: 3-trialData[2]},
-    lightest: {longer: trialData[4], shorter: 3-trialData[4]}
+    darkest: {taller: trialData[2], shorter: 3-trialData[2]},
+    lightest: {taller: trialData[4], shorter: 3-trialData[4]}
   }[config.current.firstTask][config.current.secondTask];
 
   if ((config.firstTask == 'darkest' && correctAnswer == trialData[3]) || 
@@ -93,16 +93,7 @@ function handleResponse(response) {
     const incorrectDirection = correctAnswer === 1 ? direction2 : direction1;
 
     let explanation = `The answer is the <b>${correctDirection}</b> chart `;
-    if (config.current.firstTask === "darkest") {
-      explanation += `because its darkest bar `;
-    } else {
-      explanation += `because its lightest bar `;
-    }
-    if (config.current.secondTask === "longer") {
-      explanation += `is longer. `;
-    } else {
-      explanation += `is shorter. `
-    }
+    explanation += `because its ${config.current.firstTask} bar is ${config.current.secondTask}. `;
     explanation += '<br>Please press the <b>spacebar</b> for the next trial.';
 
     const fontColor = isCorrect ? "green" : "red";

@@ -13,7 +13,13 @@ export function getStudyInstructionsHTML(config) {
 export function getTaskInstructionHTML(config) {
   const { firstTask, secondTask } = config;
 
-  return `Find the ${firstTask} bar in each chart and identify which one is ${secondTask}.`;
+  let instructionText = `Find the ${firstTask} bar in each chart and `;
+  if (secondTask === 'taller' || secondTask === 'shorter') {
+    instructionText += ` identify which one is ${secondTask}.`;
+  } else {
+    instructionText += ` identify which one reaches ${secondTask}.`;
+  }
+  return instructionText;
 }
 
 export function getTrialBlockInstructionsHTML(config) {
@@ -29,18 +35,23 @@ export function getTrialBlockInstructionsHTML(config) {
   let instructionText = "<p>";
   const layoutText = layout === 'horizontal' ? 'side by side' : 'one above the other';
   const directionText = layout === 'horizontal' ? 'left or right' : 'up or down';
-  const answerDirection = secondTask === 'longer' ? 'RIGHT' : 'LEFT';
+  const answerDirection = (secondTask === 'taller' || (firstTask === 'lightest' && secondTask === 'higher') || (firstTask === 'darkest' && secondTask === 'lower')) ? 'RIGHT' : 'LEFT';
 
   if (isEasyPractice) {
     instructionText += `You will be presented with two charts ${layoutText}. `;
-    instructionText += `Each chart contains colored bars. Your task is to answer the question: <strong>`
-    instructionText += `Look at the ${firstTask} bars in each chart. Which one is ${secondTask}?`
+    instructionText += `Each chart contains colored bars. Your task is to answer the question: <strong>`;
+    instructionText += `Look at the ${firstTask} bars in each chart. `;
+    instructionText += `Which one is ${secondTask}?`;
+
 
     instructionText += `</strong> <br> To respond, please press the ${directionText} arrow key. <br><br>`;
-
-    instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart is ${secondTask}. So, you would press the ${answerDirection} ARROW KEY. `;
-
-    instructionText += `<img src="static/img/${firstTask}-${secondTask}.png" ${layout == "horizontal" ? "width" : "height"}="400px">`;
+    if (secondTask === 'taller' || secondTask === 'shorter') {
+      instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart is ${secondTask}. `;
+    } else {
+      instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart reaches ${secondTask}. `;
+    }
+    instructionText += `So, you would press the ${answerDirection} ARROW KEY. `
+    instructionText += `<img src="static/img/bar-${firstTask}-${secondTask}.png" ${layout == "horizontal" ? "width" : "height"}="400px">`;
 
     instructionText += 'Please indicate your answer as ACCURATELY and as QUICKLY as possible. <br/>';
     instructionText += 'You will be asked to complete practice trials. You must get <b>5 correct in a row</b> to proceed.';
@@ -55,9 +66,8 @@ export function getTrialBlockInstructionsHTML(config) {
     instructionText += '<h3>Press the spacebar to start the 8 practice trials.</h3>';
 
   } else {
-    instructionText += `Real Trials<br><br>`;
     instructionText += `You got ${practiceCorrects} out of ${blockLength} correct.<br><br>`;
-    instructionText += `<b>Accuracy</b> is just as important as speed!<br><br>`;
+    instructionText += `Remember that <b>Accuracy</b> is just as important as speed!<br><br>`;
     instructionText += `Now you will complete ${blockLength} real trials. <br>`;
     instructionText += 'You do not need to press the spacebar in this section. The trials will advance automatically.';
     instructionText += '<h3>Press the spacebar to start the real trials.</h3>';
