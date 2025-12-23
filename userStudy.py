@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import os
 import logging
 import sys
+import string
+from pathlib import Path
 
 load_dotenv()
 
@@ -23,21 +25,43 @@ username = os.getenv('DATABASE_USERNAME')
 password = os.getenv('DATABASE_PASSWORD')
 driver = '{ODBC Driver 18 for SQL Server}'
 
-stimuliDir = 'stimuli_bias'
+stimuliColorLengthDir = 'stimuli_bias/color-length'
+stimuliLengthColorDir = 'stimuli_bias/length-color'
+stimuliSingleTaskDir = 'stimuli_bias/single-task'
 
 participantCounter = 0
 
-with open(stimuliDir + '/stimuli.pickle', 'rb') as file:
-    stimuli = pickle.load(file)
+datasets = {
+    "color-length": stimuliColorLengthDir,
+    "length-color": stimuliLengthColorDir,
+    "single-task": stimuliSingleTaskDir,
+}
 
-with open(stimuliDir + '/practice.pickle', 'rb') as file:
-    practice = pickle.load(file)
+files = {
+    "stimuli": "stimuli.pickle",
+    "practice_hard": "practice.pickle",
+    "practice_easy": "stimuli_easy.pickle",
+    "validation": "validation_stimuli.pickle",
+}
 
-with open(stimuliDir + '/stimuli_easy.pickle', 'rb') as file:
-    practice_easy = pickle.load(file)  
+def getTaskType(taskStr):
+    if taskStr in {'darkest+taller', 'darkest+shorter', 'lightest+taller', 'lightest+shorter'}:
+        return "color-length"
+    elif taskStr in {'tallest+darker', 'tallest+lighter', 'shortest+darker', 'shortest+lighter'}:
+        return "length-color"
+    else:
+        return "single-task"
 
-with open(stimuliDir + '/validation_stimuli.pickle', 'rb') as file:
-    validation_stimuli = pickle.load(file)  
+def load_pickle(dir_path, filename):
+    with open(Path(dir_path) / filename, "rb") as f:
+        return pickle.load(f)
+
+stimuli = {}
+for task, directory in datasets.items():
+    stimuli[task] = {}
+    for key, filename in files.items():
+        stimuli[task][key] = load_pickle(directory, filename)
+
 
 # with open(stimuliDir + '/validation_stimuli_compare_index.pickle', 'rb') as file:
 #     validation_stimuli_compare_index = pickle.load(file)  
@@ -55,9 +79,8 @@ def get_db_connection():
 # Instructions page
 @app.route('/')
 def instructions():
-    first_task = request.args.get('first_task')
-    second_task = request.args.get('second_task')
-    return render_template('consent.html', first_task=first_task, second_task=second_task)
+    task = request.args.get('task')
+    return render_template('consent.html', task=task)
 
 # Verification page
 @app.route('/verification')
@@ -112,7 +135,7 @@ def submit_survey():
     q2 = request.form.get("q2")
     participant_id = request.form.get("participant_id")
 
-    # Process and store the responses (add your database logic here)
+    # Process and store the responses
     print("Survey Responses:", participant_id, q1, q2)  # Example log
 
     conn = get_db_connection()
@@ -139,9 +162,10 @@ def submit_survey():
 @app.route('/task')
 def task():
     participant_id = request.args.get('participant_id', '')
-    first_task = request.args.get('first_task', '')
-    second_task = request.args.get('second_task', '')
-    return render_template("task.html", participant_id=participant_id, first_task=first_task, second_task=second_task)  # Redirect to the task page
+    if participant_id == '':
+        participant_id = 'pilot_' + ''.join(random.choices(string.ascii_letters + string.digits, k=50))
+    task = request.args.get('task', '')
+    return render_template("task.html", participant_id=participant_id, task=task)  # Redirect to the task page
 
 @app.route('/follow_up', methods=['GET'])
 def followup():
@@ -172,30 +196,23 @@ def submit_followup():
 def initializeTask():
     data = request.get_json()
     participant_id = data['participant_id']
-    first_task_str = data.get('first_task', None)
-    second_task_str = data.get('second_task', None) # l = longer, s = shorter, h = higher, w = lower
+    task_str = data.get('task', None)
+    # second_task_str = data.get('second_task', None) # l = longer, s = shorter, h = higher, w = lower
 
     global participantCounter
 
     # Assigning conditions
-    if validate_firstTaskStr(first_task_str):
-        first_task = decode_firstTaskStr(first_task_str)
+    if validate_taskStr(task_str):
+        task = decode_taskStr(task_str)
     else:
-        # if participantCounter % 2 == 0:
-        #     first_task = ["darkest", "darkest", "lightest", "lightest"]
-        # elif participantCounter % 2 == 1:
-        #     first_task = ["lightest", "lightest", "darkest", "darkest"]
-        first_task = random.sample(["darkest", "lightest"], 1)
-    if validate_secondTaskStr(second_task_str):
-        second_task = decode_secondTaskStr(second_task_str)
-    else:
-        # if participantCounter % 2 == 0:
-        #     second_task = ["taller", "shorter", "taller", "shorter"]
-        # elif participantCounter % 2 == 1:
-        #     second_task = ["shorter", "taller", "shorter", "taller"]
-        second_task = random.sample(["taller", "shorter"], 1)
-    layout = ['horizontal'] * len(first_task)
-    orientation = ['vertical'] * len(first_task)
+        task = random.sample(["darkest+taller", "darkest+shorter", "lightest+taller", "lightest+shorter"], 1)
+        task += random.sample([["darkest", "lightest"], ["lightest", "darkest"], ["tallest", "shortest"], ["shortest", "tallest"]], 1)[0]
+        task += random.sample(["tallest+darker", "tallest+lighter", "shortest+darker", "shortest+lighter"], 1)
+
+
+    layout = ['horizontal'] * len(task)
+    orientation = ['vertical'] * len(task)
+
 
     participantCounter += 1
 
@@ -203,47 +220,48 @@ def initializeTask():
     indexes_shuffled = []
     stimuli_per_block = 32
 
-    shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuli, 4)
-    for i in range(4):
-        for idx in shuffled_index[i]:
-            assert(idx < stimuli_per_block*(i+1))
+    shuffled_stimuli = []
+    shuffled_index = []
 
-    # Inject Engagement Checks
-    random.shuffle(validation_stimuli)
-    for i in range(4):
-        for j in range(4):
-            shuffled_stimuli[i].insert(j*9+5, validation_stimuli[i*4+j])
-            shuffled_index[i].insert(j*9+5, -999)
+    for key in task:
+        s, i = prepare_stimuli(stimuli[getTaskType(key)], 1)
+        shuffled_stimuli.extend(s)
+        shuffled_index.extend(i)
 
     '''
     Add easy practice stimuli
     '''
     conditions = {
-        "first_task": first_task,
-        "second_task": second_task,
-        "label": [False] * len(first_task),
+        "task": task,
+        "label": [False] * len(task),
         "layout": layout,
         "orientation": orientation,
-        "stimuli": shuffled_stimuli[:len(first_task)],
-        "practice_easy": practice_easy,
-        "numbers": shuffled_index[:len(first_task)]
+        "stimuli": shuffled_stimuli[:len(task)],
+        "numbers": shuffled_index[:len(task)]
     }
     return jsonify(conditions)
 
-@app.route('/get_practice')
+@app.route('/get_practice', methods=['GET'])
+# Generate practice stimuli and send
 def getPracticeBlock():
-    '''
-    Generate practice stimuli and send
-    '''
-    practices_per_block = 8
-    practiceBlock = random.sample(practice, practices_per_block)
+    task = request.args.get("task")
+    practiceType = "practice_" + request.args.get("practiceType")
+    if practiceType == 'practice_hard':
+        practices_per_block = 8
+    else:
+        practices_per_block = 30
+    taskType = getTaskType(task)
+    print(task)
+    print(taskType)
+    practiceBlock = random.sample(stimuli[taskType][practiceType], practices_per_block)
     return jsonify({"practice": practiceBlock})
 
 # Save response to database
 @app.route('/save_response', methods=['POST'])
 def save_response():
     data = request.get_json()
-    fields = ["participant_id", "first_task", "second_task", "answer_brightness", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when"]
+    print(data)
+    fields = ["participant_id", "task", "answer_brightness", "answer_length", "duration", "correct", "trial_number", "stimuli_number", "response", "time_when"]
     values = [data[field] for field in fields]
 
     conn = get_db_connection()
@@ -259,7 +277,7 @@ def save_response():
 @app.route("/save_practiceFail", methods=['POST'])
 def save_practiceFail():
     data = request.get_json()
-    fields = ["participant_id", "first_task", "second_task"]
+    fields = ["participant_id", "task"]
     values = [data[field] for field in fields]
 
     conn = get_db_connection()
@@ -268,7 +286,7 @@ def save_practiceFail():
         insert_row(cursor, "Practice_fail_bias", fields, values)
         conn.commit()
         conn.close()
-        print(f"participant {data['participant_id']} failed easy practice on {data['first_task']}, {data['second_task']}. Data saved.")
+        print(f"participant {data['participant_id']} failed easy practice on {data['task']}. Data saved.")
         return jsonify({'message': 'Response saved successfully'}), 200
 
     return jsonify({'message': 'Error saving response'}), 400
@@ -277,7 +295,21 @@ def save_practiceFail():
 def thank_you():
     return render_template("thank_you.html")
 
-def shuffle_stimuli_in_blocks(stimuli, num_blocks=4):
+def prepare_stimuli(stimuliSet, num_blocks):
+    shuffled_stimuli, shuffled_index = shuffle_stimuli_in_blocks(stimuliSet["stimuli"], num_blocks)
+    for i in range(num_blocks):
+        for idx in shuffled_index[i]:
+            assert(idx < len(shuffled_stimuli[0])*(i+1))
+
+    # Inject Engagement Checks
+    random.shuffle(stimuliSet["validation"])
+    for i in range(num_blocks):
+        for j in range(4):
+            shuffled_stimuli[i].insert(j*9+5, stimuliSet["validation"][i*4+j])
+            shuffled_index[i].insert(j*9+5, -999)
+    return shuffled_stimuli, shuffled_index
+
+def shuffle_stimuli_in_blocks(stimuli, num_blocks=1):
     block_size = len(stimuli) // num_blocks
     shuffled_stimuli = []
     index_mapping = []
@@ -305,29 +337,42 @@ def insert_row(cursor, table, fields, values):
     sql = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})"
     cursor.execute(sql, values)
 
-def validate_firstTaskStr(code):
-    if code and (len(code) == 1 or len(code) == 4):
-        for ch in code:
-            if ch != 'd' and ch != 'l':
+def validate_taskStr(code):
+    if code:
+        codes = code.split("-")
+        for ch in codes:
+            if ch not in ["dt", "ds", "lt", "ls", "td", "tl", "sd", "sl", "t", "s", "d", "l", "r"]:
                 return False
         return True
     return False
 
-def decode_firstTaskStr(code: str) -> list:
-    mapping = {'d': 'darkest', 'l': 'lightest'}
-    return [mapping[char] for char in code]
-
-def validate_secondTaskStr(code):
-    if code and (len(code) == 1 or len(code) == 4):
-        for ch in code:
-            if ch != 't' and ch != 's':
-                return False
-        return True
-    return False
-
-def decode_secondTaskStr(code: str) -> list:
-    mapping = {'t': 'taller', 's': 'shorter'}
-    return [mapping[char] for char in code]
+def decode_taskStr(code: str) -> list:
+    codes = code.split("-")
+    for i in range(len(codes)):
+        if codes[i] == 'r':
+            if i == 0:
+                codes[i] = random.choice(['dt', 'ds', 'lt', 'ls'])
+            elif i == 1:
+                codes[i] = random.choice(['t', 's', 'd', 'l'])
+            elif i == 2:
+                if codes[1] == 't':
+                    codes[i] = 's'
+                elif codes[1] == 's':
+                    codes[i] = 't'
+                elif codes[1] == 'd':
+                    codes[i] = 'l'
+                elif codes[1] == 'l':
+                    codes[i] = 'd'
+            elif i == 3:
+                codes[i] = random.choice(['td', 'tl', 'sd', 'sl'])
+    
+    mapping = {
+        'd': 'darkest', 'l': 'lightest', 't': 'tallest', 's': 'shortest', 
+        'dt': 'darkest+taller', 'ds': 'darkest+shorter', 'lt': 'lightest+taller', 'ls':'lightest+shorter',
+        'td': 'tallest+darker', 'tl': 'tallest+lighter', 'sd': 'shortest+darker', 'sl':'shortest+lighter',
+        'r': 'random'
+    }
+    return [mapping[char] for char in codes]
 
 if __name__ == '__main__':
     app.run(debug=True)

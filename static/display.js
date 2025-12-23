@@ -1,5 +1,5 @@
 import { drawBarChart } from './chart.js';
-import { startTimer } from './utils.js';
+import { startTimer, isDualPhaseTask, splitDualPhaseTask } from './utils.js';
 import { getTaskInstructionHTML } from './instructions.js';
 
 let currentChartViews = [];
@@ -33,8 +33,8 @@ export function displayCrosshair(duration, callback) {
   }, duration);
 }
 
-export function displayCharts({ data, firstTask, secondTask, correctAnswer, layout, orientation, label = false, scale = 1 }) {
-  currentChartConfig = { data, firstTask, secondTask, correctAnswer, layout, orientation, label, scale };
+export function displayCharts({ data, task, correctAnswer, layout, orientation, label = false, scale = 1 }) {
+  currentChartConfig = { data, task, correctAnswer, layout, orientation, label, scale };
   const container = document.getElementById('chart-container');
   const layoutStyle = layout === 'horizontal' ? 'row' : 'column';
 
@@ -69,9 +69,39 @@ export function displayCharts({ data, firstTask, secondTask, correctAnswer, layo
   `;
 
   const isCorrectAnswerFirst = correctAnswer == 1 ? true : false;
-  const redIndexes = (currentChartConfig.firstTask === 'darkest') ? data[6] : data[7];
+  let redIndexes = null;
+  if (isDualPhaseTask(currentChartConfig.task)) {
+    const [firstTask, secondTask] = splitDualPhaseTask(currentChartConfig.task);
+    redIndexes = (firstTask === "darkest" || firstTask === "tallest") ? data[6] : data[7];
+  } else {
+    switch (currentChartConfig.task) {
+      case "tallest":
+        redIndexes = [data[6]];
+        break;
+      case "shortest":
+        redIndexes = [data[7]];
+        break;
+      case "darkest":
+        redIndexes = [data[8]];
+        break;
+      case "lightest":
+        redIndexes = [data[9]];
+        break;
+      default:
+        throw new Error(`Unknown task: ${currentChartConfig.task}`);
+    }
+    if (currentChartConfig.correctAnswer == 1) {
+      redIndexes.push(-1);
+    } else {
+      redIndexes.unshift(-1);
+    }
+  }
+
+  currentChartConfig.redIndexes = redIndexes;
+
   const chartSpec1 = drawBarChart({ values: data[0], redIndex: redIndexes[0], isAnswer: isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues" });
   const chartSpec2 = drawBarChart({ values: data[1], redIndex: redIndexes[1], isAnswer: !isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues"});
+
 
   Promise.all([
     vegaEmbed('#chart1', chartSpec1, { actions: false }),
@@ -82,61 +112,62 @@ export function displayCharts({ data, firstTask, secondTask, correctAnswer, layo
   });
 }
 
-export function highlightDarkestBars() {
-  const [arr1, arr2, darkestLongerSide, darkestDarkerSide, lightestLongerSide, lightestDarkerSide, [darkestIndexArr1, darkestIndexArr2], [lightestIndexArr1, lightestIndexArr2]] = currentChartConfig.data;
-  const redIndex1 = (currentChartConfig.firstTask === "darkest") ? darkestIndexArr1 : lightestIndexArr1;
-  const redIndex2 = (currentChartConfig.firstTask === "darkest") ? darkestIndexArr2 : lightestIndexArr2;
+export function highlightBars() {
+  // console.log(currentChartConfig);
+  // const [arr1, arr2, darkestLongerSide, darkestDarkerSide, lightestLongerSide, lightestDarkerSide, [darkestIndexArr1, darkestIndexArr2], [lightestIndexArr1, lightestIndexArr2]] = currentChartConfig.data;
+  let redIndex1 = null;
+  let redIndex2 = null;
+  // if (isDualPhaseTask(currentChartConfig.correctAnswer == 1)) {
+  //   if (currentChartConfig.isCorrectAnswerFirst) {
+  //     redIndex1 = currentChartConfig.redIndexes[0];
+  //     redIndex2 = currentChartConfig.redIndexes[1];
+  //   } else {
+  //     redIndex1 = currentChartConfig.redIndexes[1];
+  //     redIndex2 = currentChartConfig.redIndexes[0];
+  //   }
+  // } else {
+  //   if (currentChartConfig.isCorrectAnswerFirst) {
+  //     redIndex1 = currentChartConfig.redIndexes[0];
+  //     redIndex2 = currentChartConfig.redIndexes[1];
+  //   } else {
+  //     redIndex1 = currentChartConfig.redIndexes[1];
+  //     redIndex2 = currentChartConfig.redIndexes[0];
+  //   }
+  // }
+  redIndex1 = currentChartConfig.redIndexes[0];
+  redIndex2 = currentChartConfig.redIndexes[1];
 
-  let arrowLineLayerData = [];
-  let arrowLayerData = [];
-  let textLayerData = [];
+  const arrowLineLayerData = [[], []];
+  const arrowLayerData = [[], []];
+  const textLayerData = [[], []];
+  const drawOn = { 
+    0: !isDualPhaseTask(currentChartConfig.task) && currentChartConfig.correctAnswer == 2 ? false : true,
+    1: !isDualPhaseTask(currentChartConfig.task) && currentChartConfig.correctAnswer == 1 ? false : true
+  };
 
-  // Left or Top chart
-  pushArrowLine(arrowLineLayerData, redIndex1, 100, 110);
-  pushArrow(arrowLayerData, redIndex1, 100, 180);
-
-  // Right or Bottom chart
-  const secondArrowLineStart = 100;
-  const secondArrowLineEnd = 110;
-
-  const secondArrowAngle = secondArrowAngleMap[currentChartConfig.orientation][currentChartConfig.layout];
-  const secondArrowValue = secondArrowLineStart;
-
-  pushArrowLine(arrowLineLayerData, redIndex2, secondArrowLineStart, secondArrowLineEnd);
-  pushArrow(arrowLayerData, redIndex2, secondArrowValue, secondArrowAngle);
-
-  const firstTextValue = (currentChartConfig.orientation === "horizontal") ? -20 : 120;
-  const secondTextValue = (currentChartConfig.layout === "horizontal") ? 120 : -20;
-
-  const textExplanation = [currentChartConfig.firstTask, currentChartConfig.secondTask]
+  let textExplanation = null;
+  if (isDualPhaseTask(currentChartConfig.task)) {
+    const [firstTask, secondTask] = splitDualPhaseTask(currentChartConfig.task);
+    textExplanation = [firstTask, [firstTask, secondTask]];
+  } else {
+    textExplanation = ["", currentChartConfig.task];
+  }
 
   if (currentChartConfig.correctAnswer == 1) {
-    pushText(
-      textLayerData, 
-      redIndex1, 
-      firstTextValue,
-      textExplanation
-    );
-    pushText(
-      textLayerData,
-      redIndex2,
-      secondTextValue,
-      currentChartConfig.firstTask
-    );
-  } else {
-    pushText(
-      textLayerData,
-      redIndex1,
-      firstTextValue,
-      currentChartConfig.firstTask
-    );
-    pushText(
-      textLayerData, 
-      redIndex2, 
-      secondTextValue,
-      textExplanation
-    );
-  }  
+    textExplanation.reverse();
+  }
+
+  if (drawOn[0]) {
+    pushArrowLine(arrowLineLayerData, 0, redIndex1, 0, -10);
+    pushArrow(arrowLayerData, 0, redIndex1, 0, 0);
+    pushText(textLayerData, 0, redIndex1, -15, textExplanation[0]);
+  }
+
+  if (drawOn[1]) {
+    pushArrowLine(arrowLineLayerData, 1, redIndex2, 0, -10);
+    pushArrow(arrowLayerData, 1, redIndex2, 0, 0);
+    pushText(textLayerData, 1, redIndex2, -15, textExplanation[1]);
+  }
 
   currentChartViews.forEach((view, i) => {
     view.change(
@@ -163,14 +194,14 @@ export function highlightDarkestBars() {
   });
 }
 
-function pushArrowLine(arrowLineLayerData, index, arrowLineStart, arrowLineEnd) {
-  arrowLineLayerData.push([{ category: `${index + 1}`, arrowLineStart, arrowLineEnd }]);
+function pushArrowLine(arrowLineLayerData, chartIndex, barIndex, arrowLineStart, arrowLineEnd) {
+  arrowLineLayerData[chartIndex].push({ category: `${barIndex + 1}`, arrowLineStart, arrowLineEnd });
 }
 
-function pushArrow(arrowLayerData, index, arrowValue, angle) {
-  arrowLayerData.push([{ category: `${index + 1}`, arrowValue, angle }]);
+function pushArrow(arrowLayerData, chartIndex, barIndex, arrowValue, angle) {
+  arrowLayerData[chartIndex].push({ category: `${barIndex + 1}`, arrowValue, angle });
 }
 
-function pushText(textLayerData, index, value, explanation) {
-  textLayerData.push([{ category: `${index + 1}`, value, explanation}]);
+function pushText(textLayerData, chartIndex, barIndex, value, explanation) {
+  textLayerData[chartIndex].push({ category: `${barIndex + 1}`, value, explanation});
 }

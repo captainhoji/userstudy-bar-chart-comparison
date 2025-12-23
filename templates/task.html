@@ -28,18 +28,14 @@
 
     <script>
         let participantId = "{{ participant_id }}";
-        let first_task = "{{ first_task }}"
-        let second_task = "{{ second_task }}" 
+        let task = "{{ task }}"
 
         if (!participantId) {
           participantId = localStorage.getItem("participantId");
         }
-        if (!first_task) {
-          first_task = localStorage.getItem("first_task");
+        if (!task) {
+          task = localStorage.getItem("task");
         }
-        if (!second_task) {
-          second_task = localStorage.getItem("second_task");
-        }   
 
         function goFullscreen() {
             document.documentElement.requestFullscreen().then(() => {

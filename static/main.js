@@ -1,3 +1,3 @@
 import { initializeStudy } from './study.js';
-
-initializeStudy(participantId, first_task, second_task);
+console.log(task);
+initializeStudy(participantId, task);

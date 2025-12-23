@@ -1,3 +1,7 @@
+# Da
+#
+
+
 import numpy as np
 import random
 import pickle
@@ -22,7 +26,7 @@ class StimuliConfig:
 num_of_bars = 10
 min_edge_gap = 5
 
-stimuliDir = 'stimuli_bias'
+stimuliDir = 'stimuli_bias/color-length'
 
 def main():
 	# delta_height, delta_index, delta_length
@@ -40,7 +44,7 @@ def main():
 			num_of_bars=num_of_bars,
 			min_edge_gap=min_edge_gap
 		))
-		for i in range(4)
+		for i in range(1)
 		for combo in all_combinations
 		for delta in deltas
 	]

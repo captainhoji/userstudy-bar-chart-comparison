@@ -18,3 +18,11 @@ export function stopTimer() {
   console.log("Duration:", duration.toFixed(2), "ms");
   return duration;
 }
+
+export function isDualPhaseTask(taskStr) {
+  return taskStr.includes("+");
+}
+
+export function splitDualPhaseTask(taskStr) {
+  return taskStr.split("+");
+}

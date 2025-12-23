@@ -2,9 +2,9 @@ import { stopTimer } from './utils.js';
 
 export async function saveResponseToServer({
   participantId,
-  firstTask,
-  secondTask,
+  task,
   answerBrightness,
+  answerLength,
   response,
   correct,
   trialNumber,
@@ -18,9 +18,9 @@ export async function saveResponseToServer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
-        first_task: firstTask,
-        second_task: secondTask,
+        task: task,
         answer_brightness: answerBrightness,
+        answer_length: answerLength,
         response,
         correct,
         trial_number: trialNumber,
@@ -34,9 +34,13 @@ export async function saveResponseToServer({
   }
 }
 
-export async function getPracticeData() {
+export async function getPracticeData(task, practiceType) {
   try {
-    const res = await fetch('/get_practice', {
+    const params = new URLSearchParams({
+      task,
+      practiceType
+    });
+    const res = await fetch(`/get_practice?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });

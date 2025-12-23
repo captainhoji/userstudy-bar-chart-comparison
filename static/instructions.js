@@ -1,3 +1,5 @@
+import { isDualPhaseTask, splitDualPhaseTask } from './utils.js';
+
 export function getStudyInstructionsHTML(config) {
   const { blockLength } = config;
 
@@ -11,20 +13,20 @@ export function getStudyInstructionsHTML(config) {
 }
 
 export function getTaskInstructionHTML(config) {
-  const { firstTask, secondTask } = config;
-
-  let instructionText = `Find the ${firstTask} bar in each chart and `;
-  if (secondTask === 'taller' || secondTask === 'shorter') {
-    instructionText += ` identify which one is ${secondTask}.`;
+  const { task } = config;
+  let instructionText = "";
+  if (isDualPhaseTask(task)) {
+    const [firstTask, secondTask] = splitDualPhaseTask(task);
+    instructionText += `Find the ${firstTask} bar in each chart and identify which one is ${secondTask}.`;
   } else {
-    instructionText += ` identify which one reaches ${secondTask}.`;
+    instructionText += `Identify which chart has the ${task} bar.`;
   }
   return instructionText;
 }
 
 export function getTrialBlockInstructionsHTML(config) {
   const {
-    current: { layout, label, orientation, firstTask, secondTask },
+    current: { layout, label, orientation, task },
     isPractice,
     isEasyPractice,
     blockCounter,
@@ -35,36 +37,49 @@ export function getTrialBlockInstructionsHTML(config) {
   let instructionText = "<p>";
   const layoutText = layout === 'horizontal' ? 'side by side' : 'one above the other';
   const directionText = layout === 'horizontal' ? 'left or right' : 'up or down';
-  const answerDirection = (secondTask === 'taller' || (firstTask === 'lightest' && secondTask === 'higher') || (firstTask === 'darkest' && secondTask === 'lower')) ? 'RIGHT' : 'LEFT';
 
   if (isEasyPractice) {
     instructionText += `You will be presented with two charts ${layoutText}. `;
     instructionText += `Each chart contains colored bars. Your task is to answer the question: <strong>`;
-    instructionText += `Look at the ${firstTask} bars in each chart. `;
-    instructionText += `Which one is ${secondTask}?`;
-
-
-    instructionText += `</strong> <br> To respond, please press the ${directionText} arrow key. <br><br>`;
-    if (secondTask === 'taller' || secondTask === 'shorter') {
-      instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart is ${secondTask}. `;
-    } else {
-      instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart reaches ${secondTask}. `;
+    if (isDualPhaseTask(task)) {
+      const [firstTask, secondTask] = splitDualPhaseTask(task);
+      const answerDirection = {
+        tallest: {darker: "RIGHT", lighter: "LEFT"},
+        shortest: {darker: "RIGHT", lighter: "LEFT"},
+        darkest: {taller: "RIGHT", shorter: "LEFT"},
+        lightest: {taller: "RIGHT", shorter: "LEFT"}
+      }[firstTask][secondTask];
+      // (secondTask === 'taller' || (firstTask === 'lightest' && secondTask === 'taller') || (firstTask === 'darkest' && secondTask === 'shorter')) ? 'RIGHT' : 'LEFT';
+        instructionText += `Look at the ${firstTask} bars in each chart. `;
+        instructionText += `Which one is ${secondTask}?`;
+        instructionText += `</strong> <br> To respond, please press the ${directionText} arrow key. <br><br>`;
+        instructionText += `In the example below, the ${firstTask} bar on the ${answerDirection} chart is ${secondTask}. `;
+        instructionText += `So, you would press the ${answerDirection} ARROW KEY. `
+        instructionText += `<img src="static/img/bar-${firstTask}-${secondTask}.png" ${layout == "horizontal" ? "width" : "height"}="400px">`;
+    } else { //single-phase task instruction
+      const answerDirection = {
+        tallest: "LEFT",
+        shortest: "RIGHT",
+        darkest: "LEFT",
+        lightest: "RIGHT"
+      }[task];
+      instructionText += `Which chart has the ${task} bar?`;
+      instructionText += `</strong> <br> To respond, please press the ${directionText} arrow key. <br><br>`;
+      instructionText += `In the example below, the ${task} bar is on the ${answerDirection} chart. `;
+      instructionText += `So, you would press the ${answerDirection} ARROW KEY. `
+      instructionText += `<img src="static/img/${task}.png" ${layout == "horizontal" ? "width" : "height"}="400px">`;
     }
-    instructionText += `So, you would press the ${answerDirection} ARROW KEY. `
-    instructionText += `<img src="static/img/bar-${firstTask}-${secondTask}.png" ${layout == "horizontal" ? "width" : "height"}="400px">`;
-
     instructionText += 'Please indicate your answer as ACCURATELY and as QUICKLY as possible. <br/>';
     instructionText += 'You will be asked to complete practice trials. You must get <b>5 correct in a row</b> to proceed.';
     instructionText += '<br>Please make sure you understand the instructions. Please press the spacebar to start the practice trials.</p>';
-
+  
   } else if (isPractice) {
     instructionText += `Practice Trials<br><br>`;
     instructionText += `Now you will complete 8 harder practice trials that are more like the real trials. `;
     instructionText += `You do not need to press the spacebar in this section. The trials will advance automatically. `;
-
     instructionText += '<br/><br/> Please indicate your answer as ACCURATELY and as QUICKLY as possible.<br/><br/>';
     instructionText += '<h3>Press the spacebar to start the 8 practice trials.</h3>';
-
+  
   } else {
     instructionText += `You got ${practiceCorrects} out of ${blockLength} correct.<br><br>`;
     instructionText += `Remember that <b>Accuracy</b> is just as important as speed!<br><br>`;
@@ -72,7 +87,6 @@ export function getTrialBlockInstructionsHTML(config) {
     instructionText += 'You do not need to press the spacebar in this section. The trials will advance automatically.';
     instructionText += '<h3>Press the spacebar to start the real trials.</h3>';
   }
-
   return instructionText;
 }
 

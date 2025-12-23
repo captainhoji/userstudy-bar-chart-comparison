@@ -1,8 +1,7 @@
 // handles between-block logic 
 import { getStudyInstructionsHTML, getTrialBlockInstructionsHTML, showInstructionsOverlay } from './instructions.js';
-import { drawBarChart } from './chart.js';
 import { shuffle, startTimer, stopTimer } from './utils.js';
-import { saveResponseToServer, getPracticeData } from './trialManager.js';
+import { getPracticeData } from './trialManager.js';
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
 import { addKeyHandlers, removeKeyHandlers } from './events.js';
 
@@ -10,8 +9,7 @@ let config = {
   participantId: null,
   layout: [],
   label: [],
-  firstTask: [],
-  secondTask: [],
+  task: [],
   orientation: [],
   stimuli: [],
   practiceEasy: [],
@@ -22,8 +20,7 @@ let config = {
     layout: 'horizontal',
     label: false,
     orientation: 'vertical',
-    firstTask: null,
-    secondTask: null
+    task: null
   },
   isPractice: true,
   isEasyPractice: true,
@@ -35,32 +32,29 @@ let config = {
   startTime: null
 };
 
-export async function initializeStudy(participantId, firstTask, secondTask) {
+export async function initializeStudy(participantId, task) {
   config.participantId = participantId;
-  config.firstTask = firstTask;
-  config.secondTask = secondTask;
+  config.task = task;
 
   const response = await fetch('/initialize_task', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ participant_id: participantId, first_task: firstTask, second_task: secondTask, message: "initialize" })
+    body: JSON.stringify({ participant_id: participantId, task: task, message: "initialize" })
   });
 
   const data = await response.json();
   Object.assign(config, {
-    firstTask: data.first_task,
-    secondTask: data.second_task,
+    task: data.task,
     label: data.label,
     layout: data.layout,
     orientation: data.orientation,
     stimuli: data.stimuli,
-    practiceEasy: data.practice_easy,
     numbers: data.numbers,
     blockLength: data.stimuli[0].length,
     blockCounter: 0
   });
 
-  console.log(`firstTask: ${config.firstTask}\nsecondTask: ${config.secondTask}\nlayout: ${config.layout}\norientation: ${config.orientation}`);
+  console.log(`task: ${config.task}`);
 
   const instructionsHTML = getStudyInstructionsHTML(config);
   document.getElementById("instruction-text").innerHTML = instructionsHTML;
@@ -77,8 +71,7 @@ function initializeTrialBlock(practice = true, easyPractice = false) {
   config.current.layout = config.layout[config.blockCounter];
   config.current.label = config.label[config.blockCounter];
   config.current.orientation = config.orientation[config.blockCounter];
-  config.current.firstTask = config.firstTask[config.blockCounter];
-  config.current.secondTask = config.secondTask[config.blockCounter];
+  config.current.task = config.task[config.blockCounter];
 
   const titleContainer = document.getElementById('section-title');
   titleContainer.innerHTML = `Instructions: Section ${config.blockCounter + 1}`;
@@ -87,11 +80,13 @@ function initializeTrialBlock(practice = true, easyPractice = false) {
   showInstructionsOverlay();
 
   if (easyPractice) {
-    shuffle(config.practiceEasy);
-    config.consecutiveCorrects = 0;
-    config.blockLength = 30;
+    getPracticeData(config.current.task, 'easy').then(practiceTrials => {
+      config.practiceEasy = practiceTrials;
+      config.consecutiveCorrects = 0;
+      config.blockLength = 30;
+    });
   } else if (practice) {
-    getPracticeData().then(practiceTrials => {
+    getPracticeData(config.current.task, 'hard').then(practiceTrials => {
       config.stimuliBlock = practiceTrials;
       config.blockLength = 8;
       config.practiceCorrects = 0;
@@ -127,8 +122,7 @@ function handleNext(isCorrect) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           participant_id: participantId,
-          first_task: config.firstTask,
-          second_task: config.secondTask
+          task: config.current.task
         })
       });
     }
