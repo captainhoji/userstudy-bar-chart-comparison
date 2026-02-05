@@ -11,17 +11,23 @@ DELETE FROM Trial;
 DBCC CHECKIDENT ('Trial', RESEED, 0);
 
 
-CREATE TABLE Trial_range (
-    participant_id NVARCHAR(255) NOT NULL,
+CREATE TABLE Trial_bias (
+    participant_id NVARCHAR(100) NOT NULL,
     task NVARCHAR(20) NOT NULL,
-    stimuli_number INT NOT NULL,
-    trial_number INT NOT NULL,
-    layout NVARCHAR(10) NOT NULL,
-    orientation NVARCHAR(10) NOT NULL,
+    answer_brightness NVARCHAR(10) NOT NULL,
+    answer_length NVARCHAR(10) NOT NULL,
     correct BIT NOT NULL,
     response VARCHAR(2) NOT NULL,
     duration FLOAT,
+    stimuli_number INT NOT NULL,
+    trial_number INT NOT NULL,
     time_when DATETIME
+);
+
+
+CREATE TABLE Practice_fail_bias (
+    participant_id NVARCHAR(100) NOT NULL,
+    task NVARCHAR(20) NOT NULL,
 );
 
 
@@ -39,7 +45,7 @@ scp -i ../captainhoji.pem -r static stimuli_bias templates captainhoji@128.203.2
 sudo docker stop userstudy-container
 sudo docker rm userstudy-container
 sudo docker build --no-cache -t userstudy-app .
-sudo docker run -d -p 8080:80 --name userstudy-container userstudy-app
+sudo docker run --env-file .env -d -p 8080:80 --name userstudy-container userstudy-app
 sudo docker ps
 
 sudo docker stop userstudy-container
