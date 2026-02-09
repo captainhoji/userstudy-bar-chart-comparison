@@ -1,23 +1,12 @@
-const PHONE_MESSAGES = [
-  { sender: 'Alex', text: 'Are you free later?' },
-  { sender: 'Maya', text: 'Did you see the update?' },
-  { sender: 'Sam', text: 'Lunch at 12?' },
-  { sender: 'Jordan', text: 'Check this out.' },
-  { sender: 'Chris', text: 'Can you call me?' },
-  { sender: 'Alex', text: 'Please like this.' },
-  { sender: 'Taylor', text: 'Meeting moved to 3.' },
-  { sender: 'Maya', text: 'Photo from the trip' },
-  { sender: 'Sam', text: 'Thanks!' },
-  { sender: 'Jordan', text: 'Reminder for tomorrow.' }
-];
-
 export const PHONE_LIKE_SENDERS = ['Alex', 'Maya'];
 
 export const PHONE_TIMING = {
-  MESSAGE_VISIBLE_MS: 3000,
+  MESSAGE_VISIBLE_MS: 2000,
   GAP_MIN_MS: 500,
-  GAP_MAX_MS: 2000
+  GAP_MAX_MS: 1000
 };
+
+const PHONE_MESSAGES_CSV = '/static/phone_messages.csv';
 
 function createMessageElement(message, isActive, liked) {
   const messageEl = document.createElement('div');
@@ -39,6 +28,61 @@ export function createPhoneTask() {
   let currentLiked = false;
   let active = false;
   let stats = { total: 0, correct: 0 };
+  let baseChunks = [];
+  let messageSequence = [];
+  let loadPromise = null;
+
+  function parseCsv(text) {
+    const lines = text.trim().split('\n');
+    const rows = [];
+    for (let i = 1; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = line.split(',');
+      if (parts.length < 3) continue;
+      const chunkId = parts[0].trim();
+      const sender = parts[1].trim();
+      const messageText = parts.slice(2).join(',').trim();
+      rows.push({ chunkId, sender, text: messageText });
+    }
+    return rows;
+  }
+
+  function shuffleArray(arr) {
+    const copy = arr.slice();
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function buildSequence() {
+    const shuffledChunks = shuffleArray(baseChunks);
+    messageSequence = shuffledChunks.flatMap((chunk) => chunk);
+    messageIndex = 0;
+  }
+
+  function loadMessages() {
+    if (loadPromise) return loadPromise;
+    loadPromise = fetch(PHONE_MESSAGES_CSV)
+      .then((res) => res.text())
+      .then((text) => {
+        const rows = parseCsv(text);
+        const chunksMap = new Map();
+        rows.forEach((row) => {
+          if (!chunksMap.has(row.chunkId)) chunksMap.set(row.chunkId, []);
+          chunksMap.get(row.chunkId).push({ sender: row.sender, text: row.text });
+        });
+        baseChunks = Array.from(chunksMap.values());
+        buildSequence();
+      })
+      .catch(() => {
+        baseChunks = [];
+        messageSequence = [];
+      });
+    return loadPromise;
+  }
 
   function resolveCurrentMessage() {
     if (!currentMessage) return;
@@ -65,7 +109,8 @@ export function createPhoneTask() {
     if (!active) return;
     const delay = PHONE_TIMING.GAP_MIN_MS + Math.random() * (PHONE_TIMING.GAP_MAX_MS - PHONE_TIMING.GAP_MIN_MS);
     showTimerId = window.setTimeout(() => {
-      currentMessage = PHONE_MESSAGES[messageIndex % PHONE_MESSAGES.length];
+      if (!messageSequence.length) return;
+      currentMessage = messageSequence[messageIndex % messageSequence.length];
       messageIndex += 1;
       currentLiked = false;
       renderMessages(currentMessage);
@@ -97,8 +142,11 @@ export function createPhoneTask() {
     start() {
       if (active) return;
       active = true;
-      scheduleNextMessage();
-      document.addEventListener('keydown', handleLikeKey);
+      loadMessages().then(() => {
+        if (!active) return;
+        scheduleNextMessage();
+        document.addEventListener('keydown', handleLikeKey);
+      });
     },
     pause() {
       active = false;
@@ -115,6 +163,9 @@ export function createPhoneTask() {
       currentMessage = null;
       currentLiked = false;
       if (container) container.innerHTML = '';
+      if (baseChunks.length) {
+        buildSequence();
+      }
     },
     getStats() {
       const accuracy = stats.total === 0 ? null : stats.correct / stats.total;

@@ -82,7 +82,7 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
     <div style="
       display: flex;
       flex-direction: row;
-      gap: 40px;
+      gap: 0px;
       align-items: center;
       justify-content: center;
       max-width: 90%;
@@ -110,7 +110,7 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
         <img
           src="${trial.legendSrc}"
           alt="legend"
-          style="max-width: 120px; max-height: 60vh; object-fit: contain;"
+          class="legend-image"
         />
         <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
       </div>

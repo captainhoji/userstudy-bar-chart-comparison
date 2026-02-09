@@ -67,6 +67,12 @@
 
 </body>
 <script>
+    const params = new URLSearchParams(window.location.search);
+    const attention = params.get("attention");
+    if (attention) {
+        localStorage.setItem("attention", attention);
+    }
+
     document.getElementById("consentCheck").addEventListener("change", function() {
         document.getElementById("continueBtn").disabled = !this.checked;
     });

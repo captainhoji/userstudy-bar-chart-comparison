@@ -28,6 +28,15 @@ function buildHeatmapList(startIndex = 0, countPerSide = HEATMAP_COUNT_PER_SIDE)
   return heatmaps;
 }
 
+function shuffleArray(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 function buildTrialsFromHeatmaps(heatmaps) {
   const legendConditions = [
     { id: 'dark-up', src: LEGEND_IMAGES.darkUp },
@@ -66,15 +75,16 @@ export function buildHeatmapTrials() {
 }
 
 export function buildPracticeTrialsRandom(count = 20) {
-  const heatmaps = buildHeatmapList(10, 10);
+  const heatmaps = shuffleArray(buildHeatmapList(10, 10));
   const legendConditions = [
     { id: 'dark-up', src: LEGEND_IMAGES.darkUp },
     { id: 'light-up', src: LEGEND_IMAGES.lightUp }
   ];
 
   const trials = [];
-  for (let i = 0; i < count; i += 1) {
-    const heatmap = heatmaps[Math.floor(Math.random() * heatmaps.length)];
+  const sampleCount = Math.min(count, heatmaps.length);
+  for (let i = 0; i < sampleCount; i += 1) {
+    const heatmap = heatmaps[i];
     const legend = legendConditions[Math.floor(Math.random() * legendConditions.length)];
     const labels = LABEL_CONDITIONS[Math.floor(Math.random() * LABEL_CONDITIONS.length)];
     const darkIsUp = legend.id === 'dark-up';

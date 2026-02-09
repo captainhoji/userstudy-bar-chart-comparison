@@ -5,6 +5,7 @@ import { addKeyHandlers } from './events.js';
 import { createPhoneTask, PHONE_LIKE_SENDERS } from './phoneTask.js';
 import { savePracticeSummary } from './trialManager.js';
 import { getPhoneScreen } from './display.js';
+import { shuffle } from './utils.js';
 
 let config = {
   participantId: null,
@@ -20,8 +21,8 @@ const phoneTask = createPhoneTask();
 export async function initializeStudy(participantId, attention) {
   config.participantId = participantId || localStorage.getItem("participantId");
   config.attention = attention || localStorage.getItem("attention") || "dual";
-  config.trials = buildHeatmapTrials();
-  config.practiceTrials = buildPracticeTrialsRandom(20);
+  config.trials = shuffle(buildHeatmapTrials());
+  config.practiceTrials = shuffle(buildPracticeTrialsRandom(20));
   config.realTrials = config.trials;
   config.trialCounter = 0;
 
@@ -38,23 +39,28 @@ export async function initializeStudy(participantId, attention) {
 
 
   const attentionLine = config.attention === 'dual'
-    ? `You will also see a phone screen on the left. Press the spacebar to "like" messages from ${PHONE_LIKE_SENDERS.join(' and ')}.
-       Please keep your attention split between the heatmap task and the phone task, and try to be as accurate as possible on both.<br>`
+    ? `You will also see a <b>phone screen</b> on the left. <b>Press the spacebar to "like" messages from ${PHONE_LIKE_SENDERS.join(' and ')}</b>.
+       Please keep your attention on both tasks, and try to be as fast and accurate as possible on both.<br>`
     : '';
 
   const instructionsHTML = `
     <p>
-      You will see many heatmaps. Each map shows data measured at different locations on the planet,
-      where different animals are visible different amounts at different times of day.
-      Below are two examples of such heatmaps.
+      You will see colormaps representing the amount of animal sightings on a distant planet, Sparl.
+      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
+      Each map has a legend that uses the labels “greater” and “fewer”.<br>
+      Your task is to indicate whether there are more animals early (left) or late (right) in the day.
+      Respond with the <b>left or right arrow key</b>.<br>
     </p>
     <div class="instruction-example-grid">
       ${exampleGrid}
     </div>
     <p>
+      The four examples above (left to right) have answers: <b>Right, Left, Right, Left</b>.<br>
+      Note that the legend and labels change, so please check the legend on <b>every trial</b>
+      to know whether darker colors mean greater or fewer values.<br><br>
       This experiment begins with 20 practice trials, followed by ${config.realTrials.length} real trials.<br>
-      In each trial, a heatmap and its legend will appear on the right side.<br>
-      Your task is to indicate which side shows greater values. Respond with the left or right arrow key.<br><br>
+      Please respond as quickly as possible while maintaining accuracy. A tone will play when you make an error,
+      and you will be notified of your accuracy periodically.<br><br>
       ${attentionLine}
       Press the spacebar to start the practice trials.
     </p>
@@ -74,6 +80,8 @@ function startTrials() {
   config.trials = config.practiceTrials;
   config.practiceCorrects = 0;
   config.practiceTotal = 0;
+  config.realCorrects = 0;
+  config.realTotal = 0;
   phoneTask.resetStats();
   config.onPhoneScreenReady = () => {
     if (config.attention !== 'dual') return;
@@ -103,11 +111,20 @@ function handleNext() {
           practiceAccuracyPhone
         });
       }
+      const accuracyLine = `
+        <p>
+          Practice accuracy (heatmap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
+          ${config.attention === 'dual'
+          ? `Practice accuracy (phone): <b>${practiceAccuracyPhone !== null ? Math.round(practiceAccuracyPhone * 100) : 0}%</b><br>`
+          : ''}
+        </p>
+      `;
       const transitionHTML = `
         <p>
           This is the end of the practice trials.<br><br>
           Press the spacebar to start the real trials.
         </p>
+        ${accuracyLine}
       `;
       document.getElementById("instruction-text").innerHTML = transitionHTML;
       showInstructionsOverlay();
@@ -117,6 +134,8 @@ function handleNext() {
         config.trials = config.realTrials;
         config.trialCounter = 0;
         phoneTask.resetStats();
+        config.realCorrects = 0;
+        config.realTotal = 0;
         if (config.attention === 'dual') phoneTask.start();
         loadTrial();
       });
@@ -126,11 +145,25 @@ function handleNext() {
     }
   } else if (needsBreak) {
     if (config.attention === 'dual') phoneTask.pause();
+    const heatmapAccuracy = config.currentBlock === 'practice'
+      ? (config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal)
+      : (config.realTotal === 0 ? null : config.realCorrects / config.realTotal);
+    const phoneStats = phoneTask.getStats();
+    const phoneAccuracy = config.attention === 'dual' ? phoneStats.accuracy : null;
+    const accuracyHTML = `
+      <p>
+        Accuracy (heatmap): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
+        ${config.attention === 'dual'
+        ? `Accuracy (phone): <b>${phoneAccuracy !== null ? Math.round(phoneAccuracy * 100) : 0}%</b><br>`
+        : ''}
+      </p>
+    `;
     const breakHTML = `
       <p>
         Break time. Please take a short break.<br><br>
         Press the spacebar to continue.
       </p>
+      ${accuracyHTML}
     `;
     document.getElementById("instruction-text").innerHTML = breakHTML;
     showInstructionsOverlay();

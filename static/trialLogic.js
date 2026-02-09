@@ -71,6 +71,8 @@ function handleResponse(response) {
     config.practiceTotal = (config.practiceTotal || 0) + 1;
     if (isCorrect) config.practiceCorrects = (config.practiceCorrects || 0) + 1;
   } else {
+    config.realTotal = (config.realTotal || 0) + 1;
+    if (isCorrect) config.realCorrects = (config.realCorrects || 0) + 1;
     const participantId = config.participantId || localStorage.getItem("participantId");
     if (participantId) {
       const now = new Date();
