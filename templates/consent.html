@@ -11,9 +11,9 @@
     <div class="consent-container">
         <h1>University of Wisconsin - Madison</h1>
         <h2>Research Participation Information Sheet</h2>
-        
+
         <h3>Study Title: Understanding User Interaction with Data Visualizations</h3>
-        
+
         <p><strong>Principal Investigator:</strong> Michael Gleicher</p>
         <p><strong>Phone:</strong> 608-263-2874</p>
         <p><strong>Email:</strong> <a href="mailto:GLEICHER@CS.WISC.EDU">GLEICHER@CS.WISC.EDU</a></p>
@@ -22,28 +22,27 @@
         <p><strong>Phone:</strong> 608-949-2397</p>
         <hr>
         <p>
-            You are invited to participate in a research study about understanding how people perform tasks using graphs and charts. 
+            You are invited to participate in a research study about understanding how people perform tasks using heatmaps and legends.
             You have been asked to participate because you have indicated interest to participate on Prolific.
         </p>
 
         <p>
-            The purpose of the research is to understand how different charts affect how people use them do tasks.
+            The purpose of the research is to understand how different heatmap legends affect how people use them to do tasks.
             This study will include participants who are 18 years old or above, speak fluent English, and do not have blindness or low vision conditions.
         </p>
 
         <p>
-            If you decide to participate, you will be asked to look at bar charts and answer questions based on the charts.
-            There will be multiple trials, with each trial lasting a few seconds. 
-            Then, you will be asked to answer some questions based on your experience with the trials. 
-            There are a total of four sections, each containing 36 trials.
+            If you decide to participate, you will be asked to look at heatmaps and answer questions based on the legends.
+            There will be multiple trials, with each trial lasting a few seconds.
+            Then, you will be asked to answer some questions based on your experience with the trials.
             Your participation will last approximately <strong>20 minutes</strong>.
         </p>
 
         <p>
             You can stop the study at any time. Even if you start the study, you are not required to complete it.
             All your answers will be confidential and will not be shared outside the research team.
-            The study is anonymous, and no one will be able to link your answers back to you. 
-            Please do not include your name or other information that could be used to identify you in your responses. 
+            The study is anonymous, and no one will be able to link your answers back to you.
+            Please do not include your name or other information that could be used to identify you in your responses.
             While data may be retained for future research, any future use will comply with ethical guidelines and maintain participant confidentiality.
         </p>
 
@@ -55,7 +54,7 @@
 
         <h3>Contact Information</h3>
         <p>
-            Being in this study is voluntary. Please contact <strong>Jiho Kim</strong> at kim999@wisc.edu with questions about this study. 
+            Being in this study is voluntary. Please contact <strong>Jiho Kim</strong> at kim999@wisc.edu with questions about this study.
             <a href="mailto:kim999@wisc.edu">kim999@wisc.edu</a>.
         </p>
         <div class="consent-checkbox">
@@ -68,18 +67,6 @@
 
 </body>
 <script>
-    const task = "{{ task }}" 
-    const orientationStr = "{{ orientationStr }}"
-    const layoutStr = "{{ layoutStr }}"
-
-    console.log(task);
-    console.log(orientationStr);
-    console.log(layoutStr);
-
-    localStorage.setItem("task", task);
-    localStorage.setItem("orientationStr", orientationStr);
-    localStorage.setItem("layoutStr", layoutStr);
-
     document.getElementById("consentCheck").addEventListener("change", function() {
         document.getElementById("continueBtn").disabled = !this.checked;
     });

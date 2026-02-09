@@ -1,96 +1,121 @@
-import { drawBarChart } from './chart.js';
 import { startTimer } from './utils.js';
-import { getTaskInstructionHTML } from './instructions.js';
 
-let currentChartViews = [];
-let currentChartConfig = null;
-
-const secondArrowAngleMap = {
-  horizontal: { horizontal: 270, vertical: 90 },
-  vertical: { horizontal: 180, vertical: 0 }
+let layoutCache = {
+  attention: null,
+  phoneScreen: null,
+  experimentPanel: null
 };
 
-const textExplanationMap = {
-  vertical: {
-    compare_height: ["darkest", "reaches higher"],
-    compare_index: ["darkest", "more rightward"],
-    compare_length: ["darkest", "longer"]
-  },
-  horizontal: {
-    compare_height: ["darkest", "reaches more rightward"],
-    compare_index: ["darkest", "higher"],
-    compare_length: ["darkest", "longer"]
-  }
-}
-
-export function displayCrosshair(duration, callback) {
+function ensureLayout(attention) {
   const container = document.getElementById('chart-container');
   container.style.display = 'flex';
-  container.innerHTML = `
-    <div id="crosshair" style="
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100vw;
-      height: 100vh;
-      font-size: 50px;
-      font-weight: bold;
-      color: black;
-      background-color: white;
-    ">+</div>
-  `;
+
+  if (layoutCache.experimentPanel && layoutCache.attention === attention) {
+    return layoutCache;
+  }
+
+  container.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'row';
+  wrapper.style.justifyContent = 'center';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.height = '100vh';
+  wrapper.style.width = '100vw';
+  wrapper.style.gap = '40px';
+
+  let phoneScreen = null;
+  if (attention === 'dual') {
+    const phonePanel = document.createElement('div');
+    phonePanel.className = 'attention-panel';
+
+    const phoneFrame = document.createElement('div');
+    phoneFrame.className = 'phone-frame';
+
+    const phoneNotch = document.createElement('div');
+    phoneNotch.className = 'phone-notch';
+
+    phoneScreen = document.createElement('div');
+    phoneScreen.className = 'phone-screen';
+
+    const phoneHome = document.createElement('div');
+    phoneHome.className = 'phone-home';
+
+    phoneFrame.appendChild(phoneNotch);
+    phoneFrame.appendChild(phoneScreen);
+    phoneFrame.appendChild(phoneHome);
+    phonePanel.appendChild(phoneFrame);
+    wrapper.appendChild(phonePanel);
+  }
+
+  const experimentPanel = document.createElement('div');
+  experimentPanel.className = 'experiment-panel';
+  wrapper.appendChild(experimentPanel);
+
+  container.appendChild(wrapper);
+
+  layoutCache = { attention, phoneScreen, experimentPanel };
+  return layoutCache;
+}
+
+export function getPhoneScreen() {
+  return layoutCache.phoneScreen;
+}
+
+export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
+  const { experimentPanel } = ensureLayout(attention);
+  experimentPanel.innerHTML = '<div class="blank-panel"></div>';
 
   setTimeout(() => {
-    container.innerHTML = "";
-    if (callback) callback();
+    if (typeof onDone === 'function') onDone();
   }, duration);
 }
 
-export function displayCharts({ data, task, correctAnswer, layout, orientation, label = false, scale = 1 }) {
-  currentChartConfig = { data, task, correctAnswer, layout, orientation, label, scale };
+export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
+  const { experimentPanel } = ensureLayout(attention);
 
-  const container = document.getElementById('chart-container');
-  const layoutStyle = layout === 'horizontal' ? 'row' : 'column';
-
-  container.innerHTML = `
+  experimentPanel.innerHTML = `
+    <p id="controls-instruction" style="font-size: 18px; text-align: center; width: 100%; margin-bottom: 10px;">
+      Which side shows greater values? Respond with the left or right arrow key.
+    </p>
     <div style="
       display: flex;
-      flex-direction: column;
-      justify-content: center;
+      flex-direction: row;
+      gap: 40px;
       align-items: center;
-      height: 100vh;
-      width: 100vw;
+      justify-content: center;
+      max-width: 90%;
+      max-height: 90%;
+      width: 100%;
     ">
-      <p id="controls-instruction" style="font-size: 18px; text-align: center; width: 100%; margin-bottom: 20px;">
-        ${getTaskInstructionHTML(currentChartConfig)}
-        <br> Respond using the ${layout === "horizontal" ? "left/right" : "up/down"} arrow key
-      </p>
       <div style="
         display: flex;
-        flex-direction: ${layoutStyle};
-        gap: ${layout === "horizontal" ? 100 : 50}px;
         align-items: center;
         justify-content: center;
-        max-width: 90%;
-        max-height: 90%;
-        width: 100%;
       ">
-        <div id="chart1" style="width: fit-content; height: fit-content; overflow: visible;"></div>
-        <div id="chart2" style="width: fit-content; height: fit-content; overflow: visible;"></div>
+        <img
+          src="${trial.heatmapSrc}"
+          alt="heatmap"
+          style="max-width: 60vw; max-height: 70vh; object-fit: contain; transform: scale(${scale});"
+        />
       </div>
-      <div id="explanation" style="position: absolute; top: 90%; font-size: 20px; text-align: center; max-width: 80%;"></div>
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      ">
+        <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
+        <img
+          src="${trial.legendSrc}"
+          alt="legend"
+          style="max-width: 120px; max-height: 60vh; object-fit: contain;"
+        />
+        <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
+      </div>
     </div>
   `;
 
-  const isCorrectAnswerFirst = correctAnswer == 1 ? true : false;
-  const chartSpec1 = drawBarChart({ values: data[0], redIndex: data[6][0], isAnswer: isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues" });
-  const chartSpec2 = drawBarChart({ values: data[1], redIndex: data[6][1], isAnswer: !isCorrectAnswerFirst, label, orientation, scale, colorScheme: "blues"});
-
-  Promise.all([
-    vegaEmbed('#chart1', chartSpec1, { actions: false }),
-    vegaEmbed('#chart2', chartSpec2, { actions: false })
-  ]).then(results => {
-    startTimer();
-    currentChartViews = results.map(r => r.view);
-  });
+  startTimer();
 }

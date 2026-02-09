@@ -1,2 +1,2 @@
-# bar-chart-comparison-interface
- Interface for the Bar Chart Comparison Experiment
+# heatmap-comparison-interface
+Interface for the Heatmap + Legend Experiment

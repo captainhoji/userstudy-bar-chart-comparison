@@ -27,6 +27,107 @@ body {
     min-height: 100vh;
 }
 
+.attention-panel {
+    width: 22vw;
+    min-width: 220px;
+    max-width: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 40px;
+}
+
+.experiment-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.blank-panel {
+    width: 70vw;
+    height: 80vh;
+    background-color: #d9d9d9;
+    border-radius: 8px;
+}
+
+.phone-message {
+    background: white;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+}
+
+.phone-message.active {
+    border: 2px solid #4a90e2;
+}
+
+.phone-sender {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.phone-heart {
+    color: #e64b4b;
+    margin-left: 6px;
+    font-size: 14px;
+}
+
+.phone-text {
+    color: #333;
+}
+
+.phone-frame {
+    width: 264px;
+    height: 504px;
+    border-radius: 38px;
+    border: 10px solid #111;
+    background: #222;
+    position: relative;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.phone-notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 96px;
+    height: 22px;
+    border-radius: 14px;
+    background: #111;
+}
+
+.phone-screen {
+    position: absolute;
+    top: 38px;
+    left: 14px;
+    right: 14px;
+    bottom: 38px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #f4f4f4 0%, #e2e2e2 100%);
+    padding: 14px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.phone-home {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 7px;
+    border-radius: 7px;
+    background: #111;
+}
+
 .consent-container {
     background-color: white;
     padding: 30px;
@@ -158,6 +259,29 @@ a.button.disabled {
     max-width: 100%; /* Prevents it from overflowing the container */
     max-height: 50vh; /* Ensures the image never takes more than half of the viewport */
     object-fit: contain; /* Ensures the image fits within its boundaries */
+}
+
+.legend-label {
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.instruction-example-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(80px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.instruction-example-image {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #f7f7f7;
 }
 
 .note {

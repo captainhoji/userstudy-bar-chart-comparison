@@ -1,17 +1,16 @@
-import { stopTimer } from './utils.js';
-
 export async function saveResponseToServer({
   participantId,
-  task,
   response,
   correct,
   trialNumber,
   timeWhen,
-  layout,
-  orientation,
-  label,
   stimuliNumber,
-  duration
+  duration,
+  responseTime,
+  heatmapCondition,
+  legendCondition,
+  labelCondition,
+  attention
 }) {
   try {
     await fetch('/save_response', {
@@ -19,16 +18,17 @@ export async function saveResponseToServer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
-        task,
         response,
         correct,
         trial_number: trialNumber,
         time_when: timeWhen,
-        layout,
-        orientation,
-        label,
         stimuli_number: stimuliNumber,
-        duration
+        duration,
+        response_time: responseTime,
+        heatmap_condition: heatmapCondition,
+        legend_condition: legendCondition,
+        label_condition: labelCondition,
+        attention
       })
     });
   } catch (error) {
@@ -36,16 +36,18 @@ export async function saveResponseToServer({
   }
 }
 
-export async function getPracticeData() {
+export async function savePracticeSummary({ participantId, practiceAccuracy, practiceAccuracyPhone }) {
   try {
-    const res = await fetch('/get_practice', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+    await fetch('/save_practice_summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participant_id: participantId,
+        practice_accuracy: practiceAccuracy,
+        practice_accuracy_phone: practiceAccuracyPhone
+      })
     });
-    const data = await res.json();
-    return data.practice;
-  } catch (err) {
-    console.error('Error fetching practice data:', err);
-    return [];
+  } catch (error) {
+    console.error('Failed to save practice summary:', error);
   }
 }

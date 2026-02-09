@@ -2,21 +2,17 @@
 <html lang="en">
 <head>
     <title>Task</title>
-    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div id="instruction-overlay">
         <div class="instruction-content">
-            <h2 id="section-title">Instructions: Study Overview</h2>
+            <h2 id="section-title">Instructions</h2>
             <div id="instruction-text"></div>
         </div>
     </div>
-    
-    <div id="chart-container" style="display: none;">
-    </div>
+
+    <div id="chart-container" style="display: none;"></div>
     <div id="feedback-overlay" style="display: none;">
         <span id="feedback-text"></span>
     </div>
@@ -28,23 +24,18 @@
 
     <script>
         let participantId = "{{ participant_id }}";
-        let task = "{{ task }}" 
-        let orientationStr = "{{ orientationStr }}"
-        let layoutStr = "{{ layoutStr }}"
 
         if (!participantId) {
           participantId = localStorage.getItem("participantId");
         }
-        if (!task) {
-          task = localStorage.getItem("task");
+
+        const params = new URLSearchParams(window.location.search);
+        let attention = params.get("attention");
+        if (!attention) {
+          attention = localStorage.getItem("attention") || "dual";
         }
-        if (!orientationStr) {
-          orientationStr = localStorage.getItem("orientationStr");
-        }
-        if (!layoutStr) {
-          layoutStr = localStorage.getItem("layoutStr");
-        }
-        
+        localStorage.setItem("attention", attention);
+
         function goFullscreen() {
             document.documentElement.requestFullscreen().then(() => {
               document.getElementById('fullscreen-warning').style.display = 'none';
@@ -53,7 +44,6 @@
               console.error(err);
             });
           }
-    </script>
     </script>
     <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
