@@ -1,51 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <title>Task</title>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+  <title>Task</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
-    <div id="instruction-overlay">
-        <div class="instruction-content">
-            <h2 id="section-title">Instructions</h2>
-            <div id="instruction-text"></div>
-        </div>
+  <div id="instruction-overlay">
+    <div class="instruction-content">
+      <h2 id="section-title">Instructions</h2>
+      <div id="instruction-text"></div>
     </div>
+  </div>
 
-    <div id="chart-container" style="display: none;"></div>
-    <div id="feedback-overlay" style="display: none;">
-        <span id="feedback-text"></span>
-    </div>
+  <div id="chart-container" style="display: none;"></div>
+  <div id="feedback-overlay" style="display: none;">
+    <span id="feedback-text"></span>
+  </div>
 
-    <div id="fullscreen-warning" style="position: fixed; top:0; left:0; width:100%; height:100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-        <h2>This experiment requires fullscreen mode</h2>
-        <button style="width:50%;" onclick="goFullscreen()">Enter Fullscreen</button>
-    </div>
+  <div id="fullscreen-warning"
+    style="position: fixed; top:0; left:0; width:100%; height:100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+    <h2>This experiment requires fullscreen mode</h2>
+    <button style="width:50%;" onclick="goFullscreen()">Enter Fullscreen</button>
+  </div>
 
-    <script>
-        let participantId = "{{ participant_id }}";
+  <script>
+    let participantId = "{{ participant_id }}";
 
-        if (!participantId) {
-          participantId = localStorage.getItem("participantId");
-        }
+    if (!participantId) {
+      participantId = localStorage.getItem("participantId");
+    }
 
-        const params = new URLSearchParams(window.location.search);
-        let attention = params.get("attention");
-        if (!attention) {
-          attention = localStorage.getItem("attention") || "dual";
-        }
-        localStorage.setItem("attention", attention);
+    const params = new URLSearchParams(window.location.search);
+    let attention = params.get("attention");
+    if (!attention) {
+      attention = localStorage.getItem("attention") || "dual";
+    }
+    localStorage.setItem("attention", attention);
 
-        function goFullscreen() {
-            document.documentElement.requestFullscreen().then(() => {
-              document.getElementById('fullscreen-warning').style.display = 'none';
-            }).catch((err) => {
-              alert("Fullscreen failed. Please try again.");
-              console.error(err);
-            });
-          }
-    </script>
-    <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
+    console.log("Participant ID: " + participantId);
+    console.log("Attention: " + attention);
+
+    function goFullscreen() {
+      document.documentElement.requestFullscreen().then(() => {
+        document.getElementById('fullscreen-warning').style.display = 'none';
+      }).catch((err) => {
+        alert("Fullscreen failed. Please try again.");
+        console.error(err);
+      });
+    }
+  </script>
+  <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
+
 </html>
