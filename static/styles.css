@@ -63,6 +63,14 @@ body {
     border: 2px solid #4a90e2;
 }
 
+.phone-message.liked-correct {
+    background: #d8f5dc;
+}
+
+.phone-message.liked-incorrect {
+    background: #f7d6d6;
+}
+
 .phone-sender {
     font-weight: 700;
     margin-bottom: 4px;

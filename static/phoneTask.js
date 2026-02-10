@@ -1,17 +1,34 @@
-export const PHONE_LIKE_SENDERS = ['Alex', 'Maya'];
+export const PHONE_LIKE_RULE = 'pet-keywords';
 
 export const PHONE_TIMING = {
-  MESSAGE_VISIBLE_MS: 2000,
+  MESSAGE_VISIBLE_MS: 3000,
   GAP_MIN_MS: 500,
   GAP_MAX_MS: 1000
 };
 
 const PHONE_MESSAGES_CSV = '/static/phone_messages.csv';
 
-function createMessageElement(message, isActive, liked) {
+const PET_KEYWORDS = [
+  // dog-related
+  'leash','walk','bark','wag','treat','fetch','puppy',
+  // cat-related
+  'meow','purr','litter','whisker','scratch','claw','kitten','catnip',
+  // parrot-related
+  'squawk','feather','cage','perch','wing','bird seed','seed',
+  // goldfish-related
+  'bowl','tank','filter','gill','fin','flakes','aquarium','water change','pebble'
+];
+
+function hasPetKeyword(text) {
+  const lower = text.toLowerCase();
+  return PET_KEYWORDS.some((word) => lower.includes(word));
+}
+
+function createMessageElement(message, isActive, likedStatus) {
   const messageEl = document.createElement('div');
-  messageEl.className = `phone-message${isActive ? ' active' : ''}`;
-  const heartHTML = liked ? '<span class="phone-heart">❤</span>' : '';
+  const statusClass = likedStatus ? ` ${likedStatus}` : '';
+  messageEl.className = `phone-message${isActive ? ' active' : ''}${statusClass}`;
+  const heartHTML = likedStatus ? '<span class="phone-heart">❤</span>' : '';
   messageEl.innerHTML = `
     <div class="phone-sender">${message.sender}${heartHTML}</div>
     <div class="phone-text">${message.text}</div>
@@ -26,6 +43,8 @@ export function createPhoneTask() {
   let messageIndex = 0;
   let currentMessage = null;
   let currentLiked = false;
+  let currentLikedStatus = null;
+  let currentShouldLike = false;
   let active = false;
   let stats = { total: 0, correct: 0 };
   let baseChunks = [];
@@ -39,11 +58,12 @@ export function createPhoneTask() {
       const line = lines[i].trim();
       if (!line) continue;
       const parts = line.split(',');
-      if (parts.length < 3) continue;
+      if (parts.length < 4) continue;
       const chunkId = parts[0].trim();
       const sender = parts[1].trim();
-      const messageText = parts.slice(2).join(',').trim();
-      rows.push({ chunkId, sender, text: messageText });
+      const petMention = parts[parts.length - 1].trim().toLowerCase();
+      const messageText = parts.slice(2, parts.length - 1).join(',').trim();
+      rows.push({ chunkId, sender, text: messageText, petMention });
     }
     return rows;
   }
@@ -72,7 +92,7 @@ export function createPhoneTask() {
         const chunksMap = new Map();
         rows.forEach((row) => {
           if (!chunksMap.has(row.chunkId)) chunksMap.set(row.chunkId, []);
-          chunksMap.get(row.chunkId).push({ sender: row.sender, text: row.text });
+          chunksMap.get(row.chunkId).push({ sender: row.sender, text: row.text, petMention: row.petMention });
         });
         baseChunks = Array.from(chunksMap.values());
         buildSequence();
@@ -86,12 +106,13 @@ export function createPhoneTask() {
 
   function resolveCurrentMessage() {
     if (!currentMessage) return;
-    const shouldLike = PHONE_LIKE_SENDERS.includes(currentMessage.sender);
-    const isCorrect = shouldLike ? currentLiked : !currentLiked;
+    const isCorrect = currentShouldLike ? currentLiked : !currentLiked;
     stats.total += 1;
     if (isCorrect) stats.correct += 1;
     currentMessage = null;
     currentLiked = false;
+    currentLikedStatus = null;
+    currentShouldLike = false;
   }
 
   function renderMessages(newMessage) {
@@ -100,7 +121,7 @@ export function createPhoneTask() {
     const messagesToShow = [];
     if (newMessage) messagesToShow.push(newMessage);
     messagesToShow.forEach((msg, idx) => {
-      const messageEl = createMessageElement(msg, idx === 0, currentLiked);
+      const messageEl = createMessageElement(msg, idx === 0, currentLikedStatus);
       container.appendChild(messageEl);
     });
   }
@@ -113,6 +134,8 @@ export function createPhoneTask() {
       currentMessage = messageSequence[messageIndex % messageSequence.length];
       messageIndex += 1;
       currentLiked = false;
+      currentLikedStatus = null;
+      currentShouldLike = currentMessage.petMention === 'yes' || hasPetKeyword(currentMessage.text);
       renderMessages(currentMessage);
       hideTimerId = window.setTimeout(() => {
         resolveCurrentMessage();
@@ -128,6 +151,7 @@ export function createPhoneTask() {
     event.preventDefault();
     if (!currentMessage) return;
     currentLiked = true;
+    currentLikedStatus = currentShouldLike ? 'liked-correct' : 'liked-incorrect';
     renderMessages(currentMessage);
   }
 
@@ -162,6 +186,8 @@ export function createPhoneTask() {
       messageIndex = 0;
       currentMessage = null;
       currentLiked = false;
+      currentLikedStatus = null;
+      currentShouldLike = false;
       if (container) container.innerHTML = '';
       if (baseChunks.length) {
         buildSequence();

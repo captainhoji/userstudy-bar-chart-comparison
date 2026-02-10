@@ -2,7 +2,7 @@ import { showInstructionsOverlay, hideInstructionsOverlay } from './instructions
 import { buildHeatmapTrials, buildPracticeTrialsRandom } from './heatmapTrials.js';
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
 import { addKeyHandlers } from './events.js';
-import { createPhoneTask, PHONE_LIKE_SENDERS } from './phoneTask.js';
+import { createPhoneTask } from './phoneTask.js';
 import { savePracticeSummary } from './trialManager.js';
 import { getPhoneScreen } from './display.js';
 import { shuffle } from './utils.js';
@@ -39,8 +39,21 @@ export async function initializeStudy(participantId, attention) {
 
 
   const attentionLine = config.attention === 'dual'
-    ? `You will also see a <b>phone screen</b> on the left. <b>Press the spacebar to "like" messages from ${PHONE_LIKE_SENDERS.join(' and ')}</b>.
-       Please keep your attention on both tasks, and try to be as fast and accurate as possible on both.<br>`
+    ? `On the left side of the screen, you will see a phone showing a group chat.
+      Imagine you are in a group chat with four friends. 
+      Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>, <strong>parrot</strong>, or <strong>goldfish</strong>.
+      Every few seconds, a new message will appear in the chat. Each message will stay on the screen briefly and then disappear.
+      Your friends really love their pets. When they send a message about their pet, they expect you to “like” it — otherwise they might get mad at you!
+      <strong>Your task:</strong>
+      <ul>
+        <li>If a message is about a pet, press the spacebar to like the message.</li>
+        <li>If a message is not about a pet, do not press anything.</li>
+      </ul>
+      Please respond as quickly and accurately as possible.<br>`
+    : '';
+
+  const onBothTasksLine = config.attention === 'dual'
+    ? 'on both tasks'
     : '';
 
   const instructionsHTML = `
@@ -59,9 +72,9 @@ export async function initializeStudy(participantId, attention) {
       Note that the legend and labels change, so please check the legend on <b>every trial</b>
       to know whether darker colors mean greater or fewer values.<br><br>
       This experiment begins with 20 practice trials, followed by ${config.realTrials.length} real trials.<br>
-      Please respond as quickly as possible while maintaining accuracy. A tone will play when you make an error,
-      and you will be notified of your accuracy periodically.<br><br>
+      A tone will play when you make an error, and you will be notified of your accuracy periodically.<br><br>
       ${attentionLine}
+      Please respond as quickly as possible ${onBothTasksLine} while maintaining accuracy. 
       Press the spacebar to start the practice trials.
     </p>
   `;
