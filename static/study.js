@@ -43,13 +43,13 @@ export async function initializeStudy(participantId, attention) {
       Imagine you are in a group chat with four friends. 
       Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>, <strong>parrot</strong>, or <strong>goldfish</strong>.
       Every few seconds, a new message will appear in the chat. Each message will stay on the screen briefly and then disappear.
-      Your friends really love their pets. When they send a message about their pet, they expect you to “like” it — otherwise they might get mad at you!
+      Your friends really love their pets. When they send a message about their pet, they expect you to “like” it, otherwise they might get mad at you!
       <strong>Your task:</strong>
       <ul>
         <li>If a message is about a pet, press the spacebar to like the message.</li>
-        <li>If a message is not about a pet, do not press anything.</li>
+        <li>If a message is not about a pet, do not press the spacebar.</li>
       </ul>
-      Please respond as quickly and accurately as possible.<br>`
+      <br>`
     : '';
 
   const onBothTasksLine = config.attention === 'dual'
@@ -58,7 +58,7 @@ export async function initializeStudy(participantId, attention) {
 
   const instructionsHTML = `
     <p>
-      You will see colormaps representing the amount of animal sightings on a distant planet, Sparl.
+      You will see colormaps representing the amount of animal sightings on a distant planet.
       The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
       Each map has a legend that uses the labels “greater” and “fewer”.<br>
       Your task is to indicate whether there are more animals early (left) or late (right) in the day.
@@ -126,7 +126,7 @@ function handleNext() {
       }
       const accuracyLine = `
         <p>
-          Practice accuracy (heatmap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
+          Practice accuracy (colormap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
           ${config.attention === 'dual'
           ? `Practice accuracy (phone): <b>${practiceAccuracyPhone !== null ? Math.round(practiceAccuracyPhone * 100) : 0}%</b><br>`
           : ''}
@@ -165,7 +165,7 @@ function handleNext() {
     const phoneAccuracy = config.attention === 'dual' ? phoneStats.accuracy : null;
     const accuracyHTML = `
       <p>
-        Accuracy (heatmap): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
+        Accuracy (colormap): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
         ${config.attention === 'dual'
         ? `Accuracy (phone): <b>${phoneAccuracy !== null ? Math.round(phoneAccuracy * 100) : 0}%</b><br>`
         : ''}

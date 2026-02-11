@@ -7,6 +7,7 @@ export const PHONE_TIMING = {
 };
 
 const PHONE_MESSAGES_CSV = '/static/phone_messages.csv';
+const PET_MESSAGES_CSV = '/static/pet_messages.csv';
 
 const PET_KEYWORDS = [
   // dog-related
@@ -41,29 +42,56 @@ export function createPhoneTask() {
   let showTimerId = null;
   let hideTimerId = null;
   let messageIndex = 0;
+  let phoneChunkIndex = 0;
+  let phoneMessageIndex = 0;
+  let lastPhoneId = null;
+  let phoneCycleCompleted = false;
   let currentMessage = null;
   let currentLiked = false;
   let currentLikedStatus = null;
   let currentShouldLike = false;
+  let acceptingInput = false;
   let active = false;
   let stats = { total: 0, correct: 0 };
   let baseChunks = [];
-  let messageSequence = [];
+  let phoneChunks = [];
+  let petMessages = [];
+  let petIndex = 0;
+  let lastPetId = null;
+  let petCycleCompleted = false;
   let loadPromise = null;
 
-  function parseCsv(text) {
+  function parsePhoneCsv(text) {
     const lines = text.trim().split('\n');
     const rows = [];
     for (let i = 1; i < lines.length; i += 1) {
       const line = lines[i].trim();
       if (!line) continue;
       const parts = line.split(',');
-      if (parts.length < 4) continue;
+      if (parts.length < 3) continue;
       const chunkId = parts[0].trim();
       const sender = parts[1].trim();
-      const petMention = parts[parts.length - 1].trim().toLowerCase();
-      const messageText = parts.slice(2, parts.length - 1).join(',').trim();
-      rows.push({ chunkId, sender, text: messageText, petMention });
+      const messageText = parts.slice(2).join(',').trim();
+      rows.push({ chunkId, sender, text: messageText, isPet: false });
+    }
+    return rows;
+  }
+
+  function parsePetCsv(text) {
+    const lines = text.trim().split('\n');
+    if (!lines.length) return [];
+    const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+    const senderIdx = header.indexOf('sender');
+    const textIdx = header.indexOf('text');
+    const rows = [];
+    for (let i = 1; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = line.split(',');
+      if (parts.length < 2) continue;
+      const sender = senderIdx >= 0 ? parts[senderIdx].trim() : parts[0].trim();
+      const messageText = textIdx >= 0 ? parts[textIdx].trim() : parts.slice(1).join(',').trim();
+      rows.push({ sender, text: messageText, isPet: true });
     }
     return rows;
   }
@@ -77,51 +105,126 @@ export function createPhoneTask() {
     return copy;
   }
 
-  function buildSequence() {
-    const shuffledChunks = shuffleArray(baseChunks);
-    messageSequence = shuffledChunks.flatMap((chunk) => chunk);
-    messageIndex = 0;
+  function buildPhoneChunks() {
+    phoneChunks = shuffleArray(baseChunks);
+    phoneChunkIndex = 0;
+    phoneMessageIndex = 0;
+    phoneCycleCompleted = false;
+  }
+
+  function buildPetMessages() {
+    petMessages = shuffleArray(petMessages);
+    petIndex = 0;
+    petCycleCompleted = false;
   }
 
   function loadMessages() {
     if (loadPromise) return loadPromise;
-    loadPromise = fetch(PHONE_MESSAGES_CSV)
-      .then((res) => res.text())
-      .then((text) => {
-        const rows = parseCsv(text);
+    loadPromise = Promise.all([
+      fetch(PHONE_MESSAGES_CSV).then((res) => res.text()),
+      fetch(PET_MESSAGES_CSV).then((res) => res.text())
+    ])
+      .then(([phoneText, petText]) => {
+        const rows = parsePhoneCsv(phoneText);
         const chunksMap = new Map();
         rows.forEach((row) => {
           if (!chunksMap.has(row.chunkId)) chunksMap.set(row.chunkId, []);
-          chunksMap.get(row.chunkId).push({ sender: row.sender, text: row.text, petMention: row.petMention });
+          chunksMap.get(row.chunkId).push({ sender: row.sender, text: row.text, isPet: false });
         });
         baseChunks = Array.from(chunksMap.values());
-        buildSequence();
+        buildPhoneChunks();
+
+        petMessages = parsePetCsv(petText);
+        petMessages = shuffleArray(petMessages);
+        petIndex = 0;
+        petCycleCompleted = false;
       })
       .catch(() => {
         baseChunks = [];
-        messageSequence = [];
+        phoneChunks = [];
+        petMessages = [];
       });
     return loadPromise;
   }
 
+  function getNextPhoneMessage() {
+    if (!phoneChunks.length) return null;
+
+    if (phoneChunkIndex >= phoneChunks.length) {
+      buildPhoneChunks();
+    }
+
+    const currentChunk = phoneChunks[phoneChunkIndex];
+    if (!currentChunk || !currentChunk.length) return null;
+
+    let msg = currentChunk[phoneMessageIndex];
+    phoneMessageIndex += 1;
+
+    if (phoneMessageIndex >= currentChunk.length) {
+      phoneMessageIndex = 0;
+      phoneChunkIndex += 1;
+      if (phoneChunkIndex >= phoneChunks.length) {
+        phoneCycleCompleted = true;
+      }
+    }
+
+    if (!msg) return null;
+
+    const msgId = `${msg.sender}:${msg.text}`;
+    if (msgId === lastPhoneId && !phoneCycleCompleted) {
+      // advance once to avoid immediate repeat
+      const next = getNextPhoneMessage();
+      if (next) return next;
+    }
+    lastPhoneId = msgId;
+    return msg;
+  }
+
+  function getNextPetMessage() {
+    if (!petMessages.length) return null;
+
+    if (petIndex >= petMessages.length) {
+      petMessages = shuffleArray(petMessages);
+      petIndex = 0;
+      petCycleCompleted = true;
+    }
+
+    let msg = petMessages[petIndex];
+    petIndex += 1;
+    if (!msg) return null;
+
+    const msgId = `${msg.sender}:${msg.text}`;
+    if (msgId === lastPetId && !petCycleCompleted) {
+      const next = getNextPetMessage();
+      if (next) return next;
+    }
+    lastPetId = msgId;
+    return msg;
+  }
+
   function resolveCurrentMessage() {
-    if (!currentMessage) return;
+    if (!currentMessage) return false;
     const isCorrect = currentShouldLike ? currentLiked : !currentLiked;
     stats.total += 1;
     if (isCorrect) stats.correct += 1;
+    return isCorrect;
+  }
+
+  function clearCurrentMessageState() {
     currentMessage = null;
     currentLiked = false;
     currentLikedStatus = null;
     currentShouldLike = false;
+    acceptingInput = false;
   }
 
-  function renderMessages(newMessage) {
+  function renderMessages(messages) {
     if (!container) return;
     container.innerHTML = '';
-    const messagesToShow = [];
-    if (newMessage) messagesToShow.push(newMessage);
-    messagesToShow.forEach((msg, idx) => {
-      const messageEl = createMessageElement(msg, idx === 0, currentLikedStatus);
+    const messagesToShow = Array.isArray(messages) ? messages : (messages ? [messages] : []);
+    const ordered = messagesToShow.length > 1 ? messagesToShow.slice().reverse() : messagesToShow;
+    ordered.forEach((msg, idx) => {
+      const messageEl = createMessageElement(msg, idx === 0, idx === 0 ? currentLikedStatus : null);
       container.appendChild(messageEl);
     });
   }
@@ -130,23 +233,38 @@ export function createPhoneTask() {
     if (!active) return;
     const delay = PHONE_TIMING.GAP_MIN_MS + Math.random() * (PHONE_TIMING.GAP_MAX_MS - PHONE_TIMING.GAP_MIN_MS);
     showTimerId = window.setTimeout(() => {
-      if (!messageSequence.length) return;
-      currentMessage = messageSequence[messageIndex % messageSequence.length];
-      messageIndex += 1;
+      const usePet = Math.random() < 0.4;
+      const nextMessage = usePet ? getNextPetMessage() : getNextPhoneMessage();
+      currentMessage = nextMessage || getNextPhoneMessage() || getNextPetMessage();
+      if (!currentMessage) return;
       currentLiked = false;
       currentLikedStatus = null;
-      currentShouldLike = currentMessage.petMention === 'yes' || hasPetKeyword(currentMessage.text);
+      currentShouldLike = currentMessage.isPet;
+      acceptingInput = true;
       renderMessages(currentMessage);
       hideTimerId = window.setTimeout(() => {
-        resolveCurrentMessage();
-        renderMessages(null);
-        scheduleNextMessage();
+        const isCorrect = resolveCurrentMessage();
+        acceptingInput = false;
+        if (currentShouldLike && !currentLiked) {
+          const angryMessage = { sender: currentMessage.sender, text: "😡", isPet: false };
+          renderMessages([currentMessage, angryMessage]);
+          window.setTimeout(() => {
+            renderMessages(null);
+            clearCurrentMessageState();
+            scheduleNextMessage();
+          }, 2000);
+        } else {
+          renderMessages(null);
+          clearCurrentMessageState();
+          scheduleNextMessage();
+        }
       }, PHONE_TIMING.MESSAGE_VISIBLE_MS);
     }, delay);
   }
 
   function handleLikeKey(event) {
     if (!active) return;
+    if (!acceptingInput) return;
     if (event.code !== 'Space') return;
     event.preventDefault();
     if (!currentMessage) return;
@@ -179,18 +297,26 @@ export function createPhoneTask() {
       showTimerId = null;
       hideTimerId = null;
       resolveCurrentMessage();
+      clearCurrentMessageState();
       document.removeEventListener('keydown', handleLikeKey);
     },
     resetStats() {
       stats = { total: 0, correct: 0 };
       messageIndex = 0;
-      currentMessage = null;
-      currentLiked = false;
-      currentLikedStatus = null;
-      currentShouldLike = false;
+      phoneChunkIndex = 0;
+      phoneMessageIndex = 0;
+      lastPhoneId = null;
+      phoneCycleCompleted = false;
+      clearCurrentMessageState();
       if (container) container.innerHTML = '';
       if (baseChunks.length) {
-        buildSequence();
+        buildPhoneChunks();
+      }
+      if (petMessages.length) {
+        petMessages = shuffleArray(petMessages);
+        petIndex = 0;
+        lastPetId = null;
+        petCycleCompleted = false;
       }
     },
     getStats() {

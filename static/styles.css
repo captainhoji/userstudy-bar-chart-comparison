@@ -28,20 +28,53 @@ body {
 }
 
 .attention-panel {
-    width: 22vw;
-    min-width: 220px;
-    max-width: 300px;
+    width: 280px;
+    min-width: 280px;
+    max-width: 280px;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-left: 40px;
+    margin-left: 100px;
 }
 
 .experiment-panel {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: fit-content;
+}
+
+.colormap-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+}
+
+.colormap-placeholder {
+    min-width: 594px;
+    min-height: 400px;
+    visibility: hidden;
+}
+
+.colormap-instruction {
+    font-size: 18px;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.colormap-row {
+    display: flex;
+    flex-direction: row;
+    gap: 0px;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 90%;
+    max-height: 90%;
+    min-height: 520px;
 }
 
 .blank-panel {
@@ -57,6 +90,7 @@ body {
     padding: 10px 12px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     font-size: 14px;
+    margin-bottom: 6px;
 }
 
 .phone-message.active {
@@ -188,26 +222,28 @@ button:disabled {
 }
 
 a.button.disabled {
-  background-color: #ccc;
-  pointer-events: none;
-  opacity: 0.5;
-  cursor: not-allowed;
+    background-color: #ccc;
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 #readyButton {
     text-align: center;
     text-decoration: none;
-        border: 1px solid #d2d6dc;
-        border-radius: 5px;
-        padding: 10px 13px;
-        width: 100px;
+    border: 1px solid #d2d6dc;
+    border-radius: 5px;
+    padding: 10px 13px;
+    width: 100px;
     font-size: 16px;
-        line-height: 1.45;
-        background: #fff;  
+    line-height: 1.45;
+    background: #fff;
     color: black;
     margin: auto;
     display: block;
-} .button:hover {
+}
+
+.button:hover {
     color: white;
     background: #d2d6dc;
     cursor: pointer;
@@ -245,12 +281,14 @@ a.button.disabled {
     max-width: 80vw;
     width: auto;
     display: flex;
-    flex-direction: column; /* Ensures image and text stack properly */
+    flex-direction: column;
+    /* Ensures image and text stack properly */
     justify-content: center;
     align-items: center;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    overflow-y: auto; /* Ensures nothing spills outside */
+    overflow-y: auto;
+    /* Ensures nothing spills outside */
 }
 
 #instruction-text {
@@ -262,11 +300,16 @@ a.button.disabled {
 }
 
 #instruction-text img {
-    display: block; /* Ensures the image is on its own row */
-    margin: 10px auto; /* Centers the image */
-    max-width: 100%; /* Prevents it from overflowing the container */
-    max-height: 50vh; /* Ensures the image never takes more than half of the viewport */
-    object-fit: contain; /* Ensures the image fits within its boundaries */
+    display: block;
+    /* Ensures the image is on its own row */
+    margin: 10px auto;
+    /* Centers the image */
+    max-width: 100%;
+    /* Prevents it from overflowing the container */
+    max-height: 50vh;
+    /* Ensures the image never takes more than half of the viewport */
+    object-fit: contain;
+    /* Ensures the image fits within its boundaries */
 }
 
 .legend-label {
@@ -306,9 +349,11 @@ a.button.disabled {
     color: red;
 }
 
-h1, h2 {
+h1,
+h2 {
     text-align: center;
-    color: #8b0000; /* Dark red (UW-Madison color) */
+    color: #8b0000;
+    /* Dark red (UW-Madison color) */
 }
 
 h3 {
@@ -337,7 +382,8 @@ a:hover {
 }
 
 .thank-you-container h1 {
-    color: #8b0000; /* Dark Red */
+    color: #8b0000;
+    /* Dark Red */
     font-size: 32px;
 }
 
@@ -352,14 +398,16 @@ a:hover {
     padding: 10px;
 }
 
-#cookieVerification, #jsVerification {
+#cookieVerification,
+#jsVerification {
     background-color: #f44336;
     color: white;
 }
 
-#cookieVerified, #jsVerified {
+#cookieVerified,
+#jsVerified {
     background-color: #04AA6D;
-    color: white;   
+    color: white;
     position: absolute;
     visibility: hidden;
 }
@@ -376,21 +424,25 @@ a:hover {
 
 .plusMinusButton {
     text-decoration: none;
-        border: 1px solid #d2d6dc;
-        border-radius: 5px;
-        padding: 0px 10px 5px 11px;
-        font-size: 26px;
-        background: #fff;
-        color: black;
-        margin: auto;
-} .plusMinusButton:hover {
-        color: white;
-        background: #e4e7eb;
-        cursor: pointer;
-} .plusMinusButton:active {
-        color: white;
-        background: #d2d6dc;
-        cursor: pointer;
+    border: 1px solid #d2d6dc;
+    border-radius: 5px;
+    padding: 0px 10px 5px 11px;
+    font-size: 26px;
+    background: #fff;
+    color: black;
+    margin: auto;
+}
+
+.plusMinusButton:hover {
+    color: white;
+    background: #e4e7eb;
+    cursor: pointer;
+}
+
+.plusMinusButton:active {
+    color: white;
+    background: #d2d6dc;
+    cursor: pointer;
 }
 
 canvas {
@@ -398,5 +450,6 @@ canvas {
 }
 
 strong {
-    display: inline; /* Ensure strong text stays inline */
+    display: inline;
+    /* Ensure strong text stays inline */
 }

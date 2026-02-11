@@ -3,7 +3,10 @@ import { startTimer } from './utils.js';
 let layoutCache = {
   attention: null,
   phoneScreen: null,
-  experimentPanel: null
+  experimentPanel: null,
+  colormapBlock: null,
+  instructionEl: null,
+  rowEl: null
 };
 
 function ensureLayout(attention) {
@@ -23,7 +26,7 @@ function ensureLayout(attention) {
   wrapper.style.alignItems = 'center';
   wrapper.style.height = '100vh';
   wrapper.style.width = '100vw';
-  wrapper.style.gap = '40px';
+  wrapper.style.gap = '150px';
 
   let phoneScreen = null;
   if (attention === 'dual') {
@@ -51,11 +54,26 @@ function ensureLayout(attention) {
 
   const experimentPanel = document.createElement('div');
   experimentPanel.className = 'experiment-panel';
+
+  const colormapBlock = document.createElement('div');
+  colormapBlock.className = 'colormap-block';
+
+  const instructionEl = document.createElement('p');
+  instructionEl.id = 'controls-instruction';
+  instructionEl.className = 'colormap-instruction';
+  instructionEl.textContent = 'Which side shows greater values? Respond with the left or right arrow key.';
+
+  const rowEl = document.createElement('div');
+  rowEl.className = 'colormap-row colormap-placeholder';
+
+  colormapBlock.appendChild(instructionEl);
+  colormapBlock.appendChild(rowEl);
+  experimentPanel.appendChild(colormapBlock);
   wrapper.appendChild(experimentPanel);
 
   container.appendChild(wrapper);
 
-  layoutCache = { attention, phoneScreen, experimentPanel };
+  layoutCache = { attention, phoneScreen, experimentPanel, colormapBlock, instructionEl, rowEl };
   return layoutCache;
 }
 
@@ -64,8 +82,12 @@ export function getPhoneScreen() {
 }
 
 export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
-  const { experimentPanel } = ensureLayout(attention);
-  experimentPanel.innerHTML = '<div class="blank-panel"></div>';
+  const { rowEl } = ensureLayout(attention);
+  if (rowEl) {
+    rowEl.className = 'colormap-row colormap-placeholder';
+    rowEl.style.opacity = '1';
+    rowEl.innerHTML = '';
+  }
 
   setTimeout(() => {
     if (typeof onDone === 'function') onDone();
@@ -73,49 +95,62 @@ export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
 }
 
 export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
-  const { experimentPanel } = ensureLayout(attention);
+  const { rowEl } = ensureLayout(attention);
+  if (!rowEl) return;
 
-  experimentPanel.innerHTML = `
-    <p id="controls-instruction" style="font-size: 18px; text-align: center; width: 100%; margin-bottom: 10px;">
-      Which side shows greater values? Respond with the left or right arrow key.
-    </p>
+  rowEl.className = 'colormap-row colormap-loading';
+  rowEl.style.opacity = '0';
+  rowEl.innerHTML = `
     <div style="
       display: flex;
-      flex-direction: row;
-      gap: 0px;
       align-items: center;
       justify-content: center;
-      max-width: 90%;
-      max-height: 90%;
-      width: 100%;
     ">
-      <div style="
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <img
-          src="${trial.heatmapSrc}"
-          alt="heatmap"
-          style="max-width: 60vw; max-height: 70vh; object-fit: contain; transform: scale(${scale});"
-        />
-      </div>
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      ">
-        <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
-        <img
-          src="${trial.legendSrc}"
-          alt="legend"
-          class="legend-image"
-        />
-        <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
-      </div>
+      <img
+        id="heatmap-image"
+        alt="heatmap"
+        style="max-width: 60vw; max-height: 70vh; object-fit: contain; transform: scale(${scale});"
+      />
+    </div>
+    <div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    ">
+      <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
+      <img
+        id="legend-image"
+        alt="legend"
+        class="legend-image"
+      />
+      <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
     </div>
   `;
+
+  const heatmapEl = rowEl.querySelector('#heatmap-image');
+  const legendEl = rowEl.querySelector('#legend-image');
+
+  let heatmapReady = false;
+  let legendReady = false;
+
+  function maybeShow() {
+    if (heatmapReady && legendReady && rowEl) {
+      rowEl.style.opacity = '1';
+    }
+  }
+
+  heatmapEl.onload = () => {
+    heatmapReady = true;
+    maybeShow();
+  };
+  legendEl.onload = () => {
+    legendReady = true;
+    maybeShow();
+  };
+
+  heatmapEl.src = trial.heatmapSrc;
+  legendEl.src = trial.legendSrc;
 
   startTimer();
 }
