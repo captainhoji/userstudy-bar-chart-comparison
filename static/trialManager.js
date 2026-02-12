@@ -36,7 +36,15 @@ export async function saveResponseToServer({
   }
 }
 
-export async function savePracticeSummary({ participantId, practiceAccuracy, practiceAccuracyPhone }) {
+export async function savePracticeSummary({
+  participantId,
+  practiceAccuracy,
+  practiceAccuracyPhone,
+  practicePhoneHit,
+  practicePhoneMiss,
+  practicePhoneFalseAlarm,
+  practicePhoneCorrectRejection
+}) {
   try {
     await fetch('/save_practice_summary', {
       method: 'POST',
@@ -44,10 +52,38 @@ export async function savePracticeSummary({ participantId, practiceAccuracy, pra
       body: JSON.stringify({
         participant_id: participantId,
         practice_accuracy: practiceAccuracy,
-        practice_accuracy_phone: practiceAccuracyPhone
+        practice_accuracy_phone: practiceAccuracyPhone,
+        hit: practicePhoneHit,
+        miss: practicePhoneMiss,
+        false_alarm: practicePhoneFalseAlarm,
+        correct_rejection: practicePhoneCorrectRejection
       })
     });
   } catch (error) {
     console.error('Failed to save practice summary:', error);
+  }
+}
+
+export async function savePhoneSummary({
+  participantId,
+  phoneHit,
+  phoneMiss,
+  phoneFalseAlarm,
+  phoneCorrectRejection
+}) {
+  try {
+    await fetch('/save_phone_summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participant_id: participantId,
+        phone_hit: phoneHit,
+        phone_miss: phoneMiss,
+        phone_false_alarm: phoneFalseAlarm,
+        phone_correct_rejection: phoneCorrectRejection
+      })
+    });
+  } catch (error) {
+    console.error('Failed to save phone summary:', error);
   }
 }

@@ -158,7 +158,11 @@ def save_practice_summary():
     fields = [
         "participant_id",
         "practice_accuracy",
-        "practice_accuracy_phone"
+        "practice_accuracy_phone",
+        "hit",
+        "miss",
+        "false_alarm",
+        "correct_rejection"
     ]
     values = [data.get(field) for field in fields]
 
@@ -171,6 +175,29 @@ def save_practice_summary():
         return jsonify({'message': 'Practice summary saved successfully'}), 200
 
     return jsonify({'message': 'Error saving practice summary'}), 400
+
+
+@app.route('/save_phone_summary', methods=['POST'])
+def save_phone_summary():
+    data = request.get_json()
+    fields = [
+        "participant_id",
+        "hit",
+        "miss",
+        "false_alarm",
+        "correct_rejection"
+    ]
+    values = [data.get(field) for field in fields]
+
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        insert_row(cursor, "Trial_phone", fields, values)
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Phone summary saved successfully'}), 200
+
+    return jsonify({'message': 'Error saving phone summary'}), 400
 
 
 # Save response to database
@@ -218,8 +245,40 @@ def ishihara():
 @app.route("/submit_ishihara", methods=["POST"])
 def submit_ishihara():
     data = request.get_json() or {}
-    print("Ishihara Responses:", data)
-    return jsonify({"message": "Ishihara responses received"}), 200
+    participant_id = data.get("participant_id")
+    color_difficulty = data.get("colorDifficulty")
+    color_blind = data.get("colorBlind")
+    device = data.get("device")
+    responses = data.get("responses") or []
+
+    total = len(responses)
+    correct_count = 0
+    for item in responses:
+        correct_answer = (item.get("correct_answer") or "").strip().lower()
+        response = (item.get("response") or "").strip().lower()
+        if correct_answer and response == correct_answer:
+            correct_count += 1
+
+    overall_accuracy = round(correct_count / total, 4) if total > 0 else None
+
+    fields = [
+        "participant_id",
+        "color_difficulty",
+        "color_blind",
+        "device",
+        "overall_accuracy"
+    ]
+    values = [participant_id, color_difficulty, color_blind, device, overall_accuracy]
+
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        insert_row(cursor, "Ishihara_test", fields, values)
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Ishihara responses saved"}), 200
+
+    return jsonify({"message": "Error saving Ishihara responses"}), 400
 
 
 def insert_row(cursor, table, fields, values):

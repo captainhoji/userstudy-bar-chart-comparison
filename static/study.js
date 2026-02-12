@@ -3,7 +3,7 @@ import { buildHeatmapTrials, buildPracticeTrialsRandom } from './heatmapTrials.j
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
 import { addKeyHandlers } from './events.js';
 import { createPhoneTask } from './phoneTask.js';
-import { savePracticeSummary } from './trialManager.js';
+import { savePracticeSummary, savePhoneSummary } from './trialManager.js';
 import { getPhoneScreen } from './display.js';
 import { shuffle } from './utils.js';
 
@@ -159,12 +159,20 @@ function handleNext() {
       const practiceAccuracy = config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal;
       const phoneStats = phoneTask.getStats();
       const practiceAccuracyPhone = config.attention === 'dual' ? phoneStats.accuracy : 1;
+      const practicePhoneHit = config.attention === 'dual' ? phoneStats.hit : null;
+      const practicePhoneMiss = config.attention === 'dual' ? phoneStats.miss : null;
+      const practicePhoneFalseAlarm = config.attention === 'dual' ? phoneStats.falseAlarm : null;
+      const practicePhoneCorrectRejection = config.attention === 'dual' ? phoneStats.correctRejection : null;
       const participantId = config.participantId || localStorage.getItem("participantId");
       if (participantId) {
         savePracticeSummary({
           participantId,
           practiceAccuracy,
-          practiceAccuracyPhone
+          practiceAccuracyPhone,
+          practicePhoneHit,
+          practicePhoneMiss,
+          practicePhoneFalseAlarm,
+          practicePhoneCorrectRejection
         });
       }
       const accuracyLine = `
@@ -197,6 +205,19 @@ function handleNext() {
       });
     } else {
       if (config.attention === 'dual') phoneTask.pause();
+      if (config.attention === 'dual') {
+        const phoneStats = phoneTask.getStats();
+        const participantId = config.participantId || localStorage.getItem("participantId");
+        if (participantId) {
+          savePhoneSummary({
+            participantId,
+            phoneHit: phoneStats.hit,
+            phoneMiss: phoneStats.miss,
+            phoneFalseAlarm: phoneStats.falseAlarm,
+            phoneCorrectRejection: phoneStats.correctRejection
+          });
+        }
+      }
       const pid = config.participantId || localStorage.getItem("participantId") || "";
       window.location.href = `/ishihara?participant_id=${encodeURIComponent(pid)}`;
     }

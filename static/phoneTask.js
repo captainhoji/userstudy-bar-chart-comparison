@@ -52,7 +52,7 @@ export function createPhoneTask() {
   let currentShouldLike = false;
   let acceptingInput = false;
   let active = false;
-  let stats = { total: 0, correct: 0 };
+  let stats = { total: 0, correct: 0, hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
   let baseChunks = [];
   let phoneChunks = [];
   let petMessages = [];
@@ -207,6 +207,15 @@ export function createPhoneTask() {
     const isCorrect = currentShouldLike ? currentLiked : !currentLiked;
     stats.total += 1;
     if (isCorrect) stats.correct += 1;
+    if (currentShouldLike && currentLiked) {
+      stats.hit += 1;
+    } else if (currentShouldLike && !currentLiked) {
+      stats.miss += 1;
+    } else if (!currentShouldLike && currentLiked) {
+      stats.falseAlarm += 1;
+    } else {
+      stats.correctRejection += 1;
+    }
     return isCorrect;
   }
 
@@ -301,7 +310,7 @@ export function createPhoneTask() {
       document.removeEventListener('keydown', handleLikeKey);
     },
     resetStats() {
-      stats = { total: 0, correct: 0 };
+      stats = { total: 0, correct: 0, hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
       messageIndex = 0;
       phoneChunkIndex = 0;
       phoneMessageIndex = 0;
