@@ -62,10 +62,7 @@ function handleResponse(response) {
   const isCorrect = response === correctSide;
   console.log(`trial ${config.trialCounter + 1} correctness: ${isCorrect ? 'correct' : 'incorrect'}`);
 
-  if (!isCorrect) {
-    const audio = new Audio('/static/stimuli/t1000Hz.wav');
-    audio.play().catch(() => {});
-  }
+  const feedbackEl = document.getElementById('colormap-feedback');
 
   if (config.currentBlock === 'practice') {
     config.practiceTotal = (config.practiceTotal || 0) + 1;
@@ -93,7 +90,23 @@ function handleResponse(response) {
     }
   }
 
-  if (typeof onNext === 'function') {
-    onNext();
+  if (!isCorrect && feedbackEl) {
+    feedbackEl.textContent = 'Incorrect';
+    setTimeout(() => {
+      const rowEl = document.querySelector('.colormap-row');
+      if (rowEl) {
+        rowEl.className = 'colormap-row colormap-placeholder';
+        rowEl.style.opacity = '1';
+        rowEl.innerHTML = '';
+      }
+      feedbackEl.textContent = '';
+      if (typeof onNext === 'function') {
+        onNext();
+      }
+    }, 500);
+  } else {
+    if (typeof onNext === 'function') {
+      onNext();
+    }
   }
 }

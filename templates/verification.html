@@ -1,54 +1,62 @@
 <!DOCTYPE html>
 
 <html lang="en">
-    <head>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
-    </head>
 
-    <body>
-        <div id="title">
-            <h1>Verification</h1>
-        </div>
+<head>
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
 
-		<div class="centerCard" id="jsVerification">
-			<p>JavaScript is required for your participation in this study and you do not currently have JavaScript enabled. Please enable JavaScript in your browser and reload this page in order to continue.</p>
-		</div>
+<body class="verification-page">
+	<div id="title">
+		<h1>Verification</h1>
+	</div>
 
-	    <div class="centerCard" id="jsVerified">
-	        <p>JavaScript is required and appears to be working.</p>
-		</div> 
+	<div class="centerCard" id="jsVerification">
+		<p>JavaScript is required for your participation in this study and you do not currently have JavaScript enabled.
+			Please enable JavaScript in your browser and reload this page in order to continue.</p>
+	</div>
 
-		<div class="centerCard" id="cookieVerification">
-	        <p>Cookies are required for your participation in this study and you do not currently have cookies enabled. Please enable cookies in your browser and use your study link to open the study again.</p>
-	    </div>
-	             
-		<div class="centerCard" id="cookieVerified">
-	        <p>Cookies are required and appear to be working.</p>
-	    </div>
-		
-		<div class="centerCard" id="browserVerification">
-	        <p>Please verify that you are using Firefox, Chrome, Safari, or Edge as your browser to participate in this online study. If you are using a different browser, please use your study link to open the study in one of those standard browsers.</p>
-	    </div>
+	<div class="centerCard" id="jsVerified">
+		<p>JavaScript is required and appears to be working.</p>
+	</div>
 
-        <div class="centerCard" id="mobileVerification">
-            <p>Please verify that you are using a computer with a large enough screen to participate in this online study. If you are currently using a smartphone or tablet, please use your study link to open the study on a computer with a large enough display to view these web pages.</p>
-        </div>
+	<div class="centerCard" id="cookieVerification">
+		<p>Cookies are required for your participation in this study and you do not currently have cookies enabled.
+			Please enable cookies in your browser and use your study link to open the study again.</p>
+	</div>
 
-		<div class="centerCard" id="fullscreenVerification">
+	<div class="centerCard" id="cookieVerified">
+		<p>Cookies are required and appear to be working.</p>
+	</div>
+
+	<div class="centerCard" id="browserVerification">
+		<p>Please verify that you are using Firefox, Chrome, Safari, or Edge as your browser to participate in this
+			online study. If you are using a different browser, please use your study link to open the study in one of
+			those standard browsers.</p>
+	</div>
+
+	<div class="centerCard" id="mobileVerification">
+		<p>Please verify that you are using a computer with a large enough screen to participate in this online study.
+			If you are currently using a smartphone or tablet, please use your study link to open the study on a
+			computer with a large enough display to view these web pages.</p>
+	</div>
+
+	<!-- <div class="centerCard" id="fullscreenVerification">
 	            <p>Please ensure that your browser window is expanded to fill your screen.</p>
-	    </div>
+	    </div> -->
 
-	    <div class="centerCard" id="fullscreenVerification">
-	            <p><strong>Please do not click the back button nor refresh the page!</strong></p>
-	    </div>
+	<div class="centerCard" id="fullscreenVerification">
+		<p><strong>Please do not click the back button nor refresh the page!</strong></p>
+	</div>
 
-		<div class="centerCard" id="mobileVerification">
-	        <p>To continue, please verify each item above.</p>
-			<a class="button" id="readyButton" href="{{ url_for('prolific_id') }}">Continue</a>
-	    </div>
+	<div class="centerCard" id="mobileVerification">
+		<p>To continue, please verify each item above.</p>
+		<a class="button" id="readyButton" href="{{ url_for('prolific_id') }}">Continue</a>
+	</div>
 
-    
-    
+
+
 	<script src="{{ url_for('static', filename='verification.js') }}"></script>
-    </body>
+</body>
+
 </html>

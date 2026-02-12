@@ -209,6 +209,19 @@ def thank_you():
     return render_template("thank_you.html")
 
 
+@app.route("/ishihara")
+def ishihara():
+    participant_id = request.args.get('participant_id', '')
+    return render_template("ishihara.html", participant_id=participant_id)
+
+
+@app.route("/submit_ishihara", methods=["POST"])
+def submit_ishihara():
+    data = request.get_json() or {}
+    print("Ishihara Responses:", data)
+    return jsonify({"message": "Ishihara responses received"}), 200
+
+
 def insert_row(cursor, table, fields, values):
     sql = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(fields))})"
     cursor.execute(sql, values)

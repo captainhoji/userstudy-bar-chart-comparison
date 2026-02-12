@@ -6,6 +6,7 @@ let layoutCache = {
   experimentPanel: null,
   colormapBlock: null,
   instructionEl: null,
+  feedbackEl: null,
   rowEl: null
 };
 
@@ -63,17 +64,22 @@ function ensureLayout(attention) {
   instructionEl.className = 'colormap-instruction';
   instructionEl.textContent = 'Which side shows greater values? Respond with the left or right arrow key.';
 
+  const feedbackEl = document.createElement('div');
+  feedbackEl.id = 'colormap-feedback';
+  feedbackEl.className = 'colormap-feedback';
+
   const rowEl = document.createElement('div');
   rowEl.className = 'colormap-row colormap-placeholder';
 
   colormapBlock.appendChild(instructionEl);
+  colormapBlock.appendChild(feedbackEl);
   colormapBlock.appendChild(rowEl);
   experimentPanel.appendChild(colormapBlock);
   wrapper.appendChild(experimentPanel);
 
   container.appendChild(wrapper);
 
-  layoutCache = { attention, phoneScreen, experimentPanel, colormapBlock, instructionEl, rowEl };
+  layoutCache = { attention, phoneScreen, experimentPanel, colormapBlock, instructionEl, feedbackEl, rowEl };
   return layoutCache;
 }
 
@@ -82,12 +88,13 @@ export function getPhoneScreen() {
 }
 
 export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
-  const { rowEl } = ensureLayout(attention);
+  const { rowEl, feedbackEl } = ensureLayout(attention);
   if (rowEl) {
     rowEl.className = 'colormap-row colormap-placeholder';
     rowEl.style.opacity = '1';
     rowEl.innerHTML = '';
   }
+  if (feedbackEl) feedbackEl.textContent = '';
 
   setTimeout(() => {
     if (typeof onDone === 'function') onDone();
@@ -95,13 +102,15 @@ export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
 }
 
 export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
-  const { rowEl } = ensureLayout(attention);
+  const { rowEl, feedbackEl } = ensureLayout(attention);
   if (!rowEl) return;
+
+  if (feedbackEl) feedbackEl.textContent = '';
 
   rowEl.className = 'colormap-row colormap-loading';
   rowEl.style.opacity = '0';
   rowEl.innerHTML = `
-    <div style="
+    <div class="heatmap-wrapper" style="
       display: flex;
       align-items: center;
       justify-content: center;
@@ -112,7 +121,7 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
         style="max-width: 60vw; max-height: 70vh; object-fit: contain; transform: scale(${scale});"
       />
     </div>
-    <div style="
+    <div class="legend-column" style="
       display: flex;
       flex-direction: column;
       align-items: center;

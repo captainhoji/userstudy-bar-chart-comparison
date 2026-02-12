@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Research Participation Information</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
 
     <div class="consent-container">
@@ -22,20 +24,22 @@
         <p><strong>Phone:</strong> 608-949-2397</p>
         <hr>
         <p>
-            You are invited to participate in a research study about understanding how people perform tasks using heatmaps and legends.
+            You are invited to participate in a research study about understanding how people perform tasks using
+            colormaps.
             You have been asked to participate because you have indicated interest to participate on Prolific.
         </p>
 
         <p>
-            The purpose of the research is to understand how different heatmap legends affect how people use them to do tasks.
-            This study will include participants who are 18 years old or above, speak fluent English, and do not have blindness or low vision conditions.
+            The purpose of the research is to understand how different colormaps affect users' task performance.
+            This study will include participants who are 18 years old or above, speak fluent English, and do not have
+            blindness or low vision conditions.
         </p>
 
         <p>
-            If you decide to participate, you will be asked to look at heatmaps and answer questions based on the legends.
+            If you decide to participate, you will be asked to look at colormaps and answer questions.
             There will be multiple trials, with each trial lasting a few seconds.
-            Then, you will be asked to answer some questions based on your experience with the trials.
-            Your participation will last approximately <strong>20 minutes</strong>.
+            Then, you will be asked to complete a color vision test.
+            Your participation will last approximately <strong>15 minutes</strong>.
         </p>
 
         <p>
@@ -43,18 +47,19 @@
             All your answers will be confidential and will not be shared outside the research team.
             The study is anonymous, and no one will be able to link your answers back to you.
             Please do not include your name or other information that could be used to identify you in your responses.
-            While data may be retained for future research, any future use will comply with ethical guidelines and maintain participant confidentiality.
+            While data may be retained for future research, any future use will comply with ethical guidelines and
+            maintain participant confidentiality.
         </p>
 
         <p>
-            If you decide to participate in the study, you will receive <strong>$4</strong>.
-            The compensation is based on the Prolific standard rate of $12/hr and the expected duration of 20 minutes.
-            The compensation is $4 even if you complete the study faster or slower.
+            If you decide to participate in the study, you will receive <strong>$3</strong>.
+            The compensation is based on the Prolific standard rate of $12/hr and the expected duration of 15 minutes.
+            The compensation is $3 even if you complete the study faster or slower.
         </p>
 
         <h3>Contact Information</h3>
         <p>
-            Being in this study is voluntary. Please contact <strong>Jiho Kim</strong> at kim999@wisc.edu with questions about this study.
+            Please contact <strong>Jiho Kim</strong> at kim999@wisc.edu with questions about this study.
             <a href="mailto:kim999@wisc.edu">kim999@wisc.edu</a>.
         </p>
         <div class="consent-checkbox">
@@ -73,12 +78,13 @@
         localStorage.setItem("attention", attention);
     }
 
-    document.getElementById("consentCheck").addEventListener("change", function() {
+    document.getElementById("consentCheck").addEventListener("change", function () {
         document.getElementById("continueBtn").disabled = !this.checked;
     });
 
-    document.getElementById("continueBtn").addEventListener("click", function() {
+    document.getElementById("continueBtn").addEventListener("click", function () {
         window.location.href = "/verification";
     });
 </script>
+
 </html>

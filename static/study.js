@@ -38,30 +38,15 @@ export async function initializeStudy(participantId, attention) {
     .join("");
 
 
-  const attentionLine = config.attention === 'dual'
-    ? `On the left side of the screen, you will see a phone showing a group chat.
-      Imagine you are in a group chat with four friends. 
-      Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>, <strong>parrot</strong>, or <strong>goldfish</strong>.
-      Every few seconds, a new message will appear in the chat. Each message will stay on the screen briefly and then disappear.
-      Your friends really love their pets. When they send a message about their pet, they expect you to “like” it, otherwise they might get mad at you!
-      <strong>Your task:</strong>
-      <ul>
-        <li>If a message is about a pet, press the spacebar to like the message.</li>
-        <li>If a message is not about a pet, do not press the spacebar.</li>
-      </ul>
-      <br>`
-    : '';
-
-  const onBothTasksLine = config.attention === 'dual'
-    ? 'on both tasks'
-    : '';
-
-  const instructionsHTML = `
+  const colormapInstructions = `
+    ${config.attention === 'dual'
+      ? `<p><b>This experiment has two tasks that you must perform at the same time.</b> First you will learn the colormap task, then the phone task.</p>`
+      : ``}
     <p>
       You will see colormaps representing the amount of animal sightings on a distant planet.
       The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
       Each map has a legend that uses the labels “greater” and “fewer”.<br>
-      Your task is to indicate whether there are more animals early (left) or late (right) in the day.
+      <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
       Respond with the <b>left or right arrow key</b>.<br>
     </p>
     <div class="instruction-example-grid">
@@ -72,16 +57,74 @@ export async function initializeStudy(participantId, attention) {
       Note that the legend and labels change, so please check the legend on <b>every trial</b>
       to know whether darker colors mean greater or fewer values.<br><br>
       This experiment begins with 20 practice trials, followed by ${config.realTrials.length} real trials.<br>
-      A tone will play when you make an error, and you will be notified of your accuracy periodically.<br><br>
-      ${attentionLine}
-      Please respond as quickly as possible ${onBothTasksLine} while maintaining accuracy. 
+      <b>A tone will play when you make an error</b>, and you will be notified of your accuracy periodically.<br><br>
+      Press the spacebar to continue.
+    </p>
+  `;
+
+  const phoneInstructions = `
+    <p>
+      On the left side of the screen, you will see a phone showing a group chat.
+      Imagine you are in a group chat with four friends.<br>
+      Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>,
+      <strong>parrot</strong>, or <strong>goldfish</strong>.<br>
+      Every few seconds, a new message will appear in the chat.<br>
+      Each message will stay on the screen briefly and then disappear.
+    </p>
+    <p>
+      Your friends really love their pets. When they send a message about their pet, they expect you to “like” it. <br>
+      Otherwise, they will get mad at you!<br>
+      <strong>Your task:</strong>
+    </p>
+      <ul>
+        <li>If a message is about a pet, <b>press the spacebar to like</b> the message.</li>
+        <li>If a message is <span class="phone-demo-not">NOT</span> about a pet, do not press the spacebar.</li>
+      </ul>
+    <div class="instruction-phone-row">
+      <div class="phone-demo">
+        <div class="phone-demo-header">Example: <span class="phone-demo-not">NOT</span> about a pet</div>
+        <div class="phone-demo-message phone-demo-message-pet">
+          <div class="phone-demo-sender">Jordan</div>
+          <div class="phone-demo-text">Are we still meeting at seven tonight?</div>
+        </div>
+      </div>
+      <div class="phone-demo">
+        <div class="phone-demo-header">Example: about a pet</div>
+        <div class="phone-demo-message phone-demo-message-pet">
+          <div class="phone-demo-sender">Alex</div>
+          <div class="phone-demo-text">My dog kept barking at the door again.</div>
+        </div>
+      </div>
+    </div>
+    <p>
+      Please respond as quickly and accurately as possible.
+    </p>
+    <p>
       Press the spacebar to start the practice trials.
     </p>
   `;
 
-  document.getElementById("instruction-text").innerHTML = instructionsHTML;
-  showInstructionsOverlay();
-  addKeyHandlers(startTrials);
+  const instructionPages = config.attention === 'dual'
+    ? [colormapInstructions, phoneInstructions]
+    : [colormapInstructions.replace('Press the spacebar to continue.', 'Press the spacebar to start the practice trials.')];
+
+  let pageIndex = 0;
+  const advanceInstruction = () => {
+    pageIndex += 1;
+    if (pageIndex >= instructionPages.length) {
+      startTrials();
+    } else {
+      showPage();
+    }
+  };
+
+  const showPage = () => {
+    document.getElementById("instruction-text").innerHTML = instructionPages[pageIndex];
+    showInstructionsOverlay();
+    addKeyHandlers(advanceInstruction);
+  };
+
+  showPage();
 }
 
 function startTrials() {
@@ -154,7 +197,8 @@ function handleNext() {
       });
     } else {
       if (config.attention === 'dual') phoneTask.pause();
-      window.location.href = `/thank_you`;
+      const pid = config.participantId || localStorage.getItem("participantId") || "";
+      window.location.href = `/ishihara?participant_id=${encodeURIComponent(pid)}`;
     }
   } else if (needsBreak) {
     if (config.attention === 'dual') phoneTask.pause();

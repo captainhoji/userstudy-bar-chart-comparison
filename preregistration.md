@@ -90,3 +90,5 @@ Accuracy will be analyzed as an exploratory outcome only (not part of the primar
 
 ## Context and additional information (Optional)
 The heatmap stimuli depict spatial patterns with one side (left or right) being darker; correctness is determined by whether darker colors map to “greater” or “fewer” values given the legend on that trial. Participants receive error feedback via a brief tone and periodic accuracy feedback every 20 trials.
+
+   
