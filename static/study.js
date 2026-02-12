@@ -40,13 +40,14 @@ export async function initializeStudy(participantId, attention) {
 
   const colormapInstructions = `
     ${config.attention === 'dual'
-      ? `<p><b>This experiment has two tasks that you must perform at the same time.</b> First you will learn the colormap task, then the phone task.</p>`
+      ? `<p><b>This experiment has two tasks for you to do at the same time, a “colormaps” task and a “phone messages” task.</b><br>
+      On this screen, we will explain instructions for the colormaps task, and on the next screen we will explain the phone messages task.</p>`
       : ``}
     <p>
-      You will see colormaps representing the amount of animal sightings on a distant planet.
-      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
+      You will see colormaps representing the amount of animal sightings on a distant planet.<br>
+      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.<br>
       Each map has a legend that uses the labels “greater” and “fewer”.<br>
-      <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
+      <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.<br>
       Respond with the <b>left or right arrow key</b>.<br>
     </p>
     <div class="instruction-example-grid">
@@ -56,9 +57,9 @@ export async function initializeStudy(participantId, attention) {
       The four examples above (left to right) have answers: <b>Right, Left, Right, Left</b>.<br>
       Note that the legend and labels change, so please check the legend on <b>every trial</b>
       to know whether darker colors mean greater or fewer values.<br><br>
-      This experiment begins with 20 practice trials, followed by ${config.realTrials.length} real trials.<br>
-      <b>A tone will play when you make an error</b>, and you will be notified of your accuracy periodically.<br><br>
-      Press the spacebar to continue.
+      If your response is incorrect, <b>“Incorrect”</b> will briefly appear in red above the colormap.<br>
+      You will also be notified of your accuracy periodically.<br><br>
+      ${config.attention === 'dual' ? 'Press the spacebar to continue to phone message instructions.' : 'Please press the spacebar when you are ready to begin.'}
     </p>
   `;
 
@@ -67,7 +68,7 @@ export async function initializeStudy(participantId, attention) {
       On the left side of the screen, you will see a phone showing a group chat.
       Imagine you are in a group chat with four friends.<br>
       Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>,
-      <strong>parrot</strong>, or <strong>goldfish</strong>.<br>
+      <strong>parrot</strong>, and <strong>goldfish</strong>.<br>
       Every few seconds, a new message will appear in the chat.<br>
       Each message will stay on the screen briefly and then disappear.
     </p>
@@ -100,13 +101,25 @@ export async function initializeStudy(participantId, attention) {
       Please respond as quickly and accurately as possible.
     </p>
     <p>
-      Press the spacebar to start the practice trials.
+      If you like a pet-related message in time, the message turns <b>light green</b>.<br>
+      If you like a message that is not about pets, the message turns <b>dark red</b>.<br><br>
+      Please press the spacebar when you are ready to begin.
+    </p>
+  `;
+
+  const practiceStartInstructions = `
+    <p>
+      Next, you will complete <b>20 practice trials</b> before the real trials begin.<br>
+      This is to help you get familiar with the tasks and response keys.
+    </p>
+    <p>
+      Please press the spacebar to begin the practice trials.
     </p>
   `;
 
   const instructionPages = config.attention === 'dual'
-    ? [colormapInstructions, phoneInstructions]
-    : [colormapInstructions.replace('Press the spacebar to continue.', 'Press the spacebar to start the practice trials.')];
+    ? [colormapInstructions, phoneInstructions, practiceStartInstructions]
+    : [colormapInstructions, practiceStartInstructions];
 
   let pageIndex = 0;
   const advanceInstruction = () => {

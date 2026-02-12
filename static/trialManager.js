@@ -77,10 +77,10 @@ export async function savePhoneSummary({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
-        phone_hit: phoneHit,
-        phone_miss: phoneMiss,
-        phone_false_alarm: phoneFalseAlarm,
-        phone_correct_rejection: phoneCorrectRejection
+        hit: phoneHit,
+        miss: phoneMiss,
+        false_alarm: phoneFalseAlarm,
+        correct_rejection: phoneCorrectRejection
       })
     });
   } catch (error) {

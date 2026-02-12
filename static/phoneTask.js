@@ -240,6 +240,8 @@ export function createPhoneTask() {
 
   function scheduleNextMessage() {
     if (!active) return;
+    if (showTimerId) window.clearTimeout(showTimerId);
+    if (hideTimerId) window.clearTimeout(hideTimerId);
     const delay = PHONE_TIMING.GAP_MIN_MS + Math.random() * (PHONE_TIMING.GAP_MAX_MS - PHONE_TIMING.GAP_MIN_MS);
     showTimerId = window.setTimeout(() => {
       const usePet = Math.random() < 0.4;
