@@ -103,7 +103,7 @@ function handleResponse(response) {
       if (typeof onNext === 'function') {
         onNext();
       }
-    }, 500);
+    }, 1000);
   } else {
     if (typeof onNext === 'function') {
       onNext();

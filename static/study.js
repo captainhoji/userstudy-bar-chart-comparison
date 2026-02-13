@@ -1,7 +1,7 @@
 import { showInstructionsOverlay, hideInstructionsOverlay } from './instructions.js';
 import { buildHeatmapTrials, buildPracticeTrialsRandom } from './heatmapTrials.js';
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
-import { addKeyHandlers } from './events.js';
+import { addKeyHandlers, addSingleKeyHandler } from './events.js';
 import { createPhoneTask } from './phoneTask.js';
 import { savePracticeSummary, savePhoneSummary } from './trialManager.js';
 import { getPhoneScreen } from './display.js';
@@ -44,11 +44,11 @@ export async function initializeStudy(participantId, attention) {
       On this screen, we will explain instructions for the colormaps task, and on the next screen we will explain the phone messages task.</p>`
       : ``}
     <p>
-      You will see colormaps representing the amount of animal sightings on a distant planet.<br>
-      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.<br>
+      You will see colormaps representing the amount of animal sightings on a distant planet.
+      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
       Each map has a legend that uses the labels “greater” and “fewer”.<br>
-      <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.<br>
-      Respond with the <b>left or right arrow key</b>.<br>
+      <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
+      Respond with the <b>left or right arrow key</b>.
     </p>
     <div class="instruction-example-grid">
       ${exampleGrid}
@@ -68,13 +68,13 @@ export async function initializeStudy(participantId, attention) {
       On the left side of the screen, you will see a phone showing a group chat.
       Imagine you are in a group chat with four friends.<br>
       Each friend has a pet: a <strong>dog</strong>, <strong>cat</strong>,
-      <strong>parrot</strong>, and <strong>goldfish</strong>.<br>
+      <strong>parrot</strong>, or <strong>goldfish</strong>.<br>
       Every few seconds, a new message will appear in the chat.<br>
       Each message will stay on the screen briefly and then disappear.
     </p>
     <p>
       Your friends really love their pets. When they send a message about their pet, they expect you to “like” it. <br>
-      Otherwise, they will get mad at you!<br>
+      Otherwise, they will get mad at you and send you an angry face (😡).<br>
       <strong>Your task:</strong>
     </p>
       <ul>
@@ -199,13 +199,13 @@ function handleNext() {
       const transitionHTML = `
         <p>
           This is the end of the practice trials.<br><br>
-          Press the spacebar to start the real trials.
+          Press Enter when you are ready to start the real trials.
         </p>
         ${accuracyLine}
       `;
       document.getElementById("instruction-text").innerHTML = transitionHTML;
       showInstructionsOverlay();
-      addKeyHandlers(() => {
+      addSingleKeyHandler('Enter', () => {
         hideInstructionsOverlay();
         config.currentBlock = 'real';
         config.trials = config.realTrials;
@@ -252,13 +252,13 @@ function handleNext() {
     const breakHTML = `
       <p>
         Break time. Please take a short break.<br><br>
-        Press the spacebar to continue.
+        Press Enter when you are ready to continue.
       </p>
       ${accuracyHTML}
     `;
     document.getElementById("instruction-text").innerHTML = breakHTML;
     showInstructionsOverlay();
-    addKeyHandlers(() => {
+    addSingleKeyHandler('Enter', () => {
       hideInstructionsOverlay();
       if (config.attention === 'dual') phoneTask.start();
       loadTrial();

@@ -29,6 +29,22 @@ export function addKeyHandlers(onSpacePress, onArrowPress = null) {
   }
 }
 
+export function addSingleKeyHandler(keyCode, callback) {
+  removeKeyHandlers();
+
+  spaceHandler = function (event) {
+    if (event.code === keyCode) {
+      event.preventDefault();
+      if (typeof callback === 'function') {
+        removeKeyHandlers();
+        callback();
+      }
+    }
+  };
+
+  document.addEventListener('keydown', spaceHandler);
+}
+
 export function removeKeyHandlers() {
   if (spaceHandler) document.removeEventListener('keydown', spaceHandler);
   if (arrowKeyHandler) document.removeEventListener('keydown', arrowKeyHandler);

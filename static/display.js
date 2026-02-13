@@ -104,6 +104,9 @@ export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
 export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
   const { rowEl, feedbackEl } = ensureLayout(attention);
   if (!rowEl) return;
+  const scaleValue = Number(scale) > 0 ? Number(scale) : 1;
+  const maxWidthVw = 60 * scaleValue;
+  const maxHeightVh = 70 * scaleValue;
 
   if (feedbackEl) feedbackEl.textContent = '';
 
@@ -118,14 +121,13 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
       <img
         id="heatmap-image"
         alt="heatmap"
-        style="max-width: 60vw; max-height: 70vh; object-fit: contain; transform: scale(${scale});"
+        style="max-width: ${maxWidthVw}vw; max-height: ${maxHeightVh}vh; object-fit: contain; display: block;"
       />
     </div>
     <div class="legend-column" style="
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
     ">
       <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
       <img
@@ -143,8 +145,28 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
   let heatmapReady = false;
   let legendReady = false;
 
+  function applyLegendSizing() {
+    const heatmapHeight = heatmapEl.getBoundingClientRect().height;
+    if (!heatmapHeight || !rowEl) return;
+
+    // Keep legend and labels at a fixed proportion of the rendered heatmap size.
+    const legendHeight = Math.round(heatmapHeight * 0.4);
+    // Keep labels readable but prevent oversized text on large displays.
+    const labelSize = Math.round(legendHeight * 0.1);
+    const gapSize = Math.max(4, Math.round(labelSize * 0.4));
+    const padY = Math.max(2, Math.round(legendHeight * 0.05));
+    const padX = Math.max(4, Math.round(legendHeight * 0.08));
+
+    rowEl.style.setProperty('--legend-height', `${legendHeight}px`);
+    rowEl.style.setProperty('--legend-label-size', `${labelSize}px`);
+    rowEl.style.setProperty('--legend-gap', `${gapSize}px`);
+    rowEl.style.setProperty('--legend-pad-y', `${padY}px`);
+    rowEl.style.setProperty('--legend-pad-x', `${padX}px`);
+  }
+
   function maybeShow() {
     if (heatmapReady && legendReady && rowEl) {
+      applyLegendSizing();
       rowEl.style.opacity = '1';
     }
   }
