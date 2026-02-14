@@ -161,7 +161,7 @@ function startTrials() {
   loadTrial();
 }
 
-function handleNext() {
+async function handleNext() {
   config.trialCounter++;
   const isLastTrial = config.trialCounter >= config.trials.length;
   const needsBreak = !isLastTrial && config.trialCounter % 20 === 0;
@@ -222,7 +222,7 @@ function handleNext() {
         const phoneStats = phoneTask.getStats();
         const participantId = config.participantId || localStorage.getItem("participantId");
         if (participantId) {
-          savePhoneSummary({
+          await savePhoneSummary({
             participantId,
             phoneHit: phoneStats.hit,
             phoneMiss: phoneStats.miss,

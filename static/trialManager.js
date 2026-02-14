@@ -13,8 +13,9 @@ export async function saveResponseToServer({
   attention
 }) {
   try {
-    await fetch('/save_response', {
+    const response = await fetch('/save_response', {
       method: 'POST',
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
@@ -31,8 +32,14 @@ export async function saveResponseToServer({
         attention
       })
     });
+    if (!response.ok) {
+      console.error('save_response returned non-OK status:', response.status);
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error('Failed to save response:', error);
+    return false;
   }
 }
 
@@ -72,8 +79,9 @@ export async function savePhoneSummary({
   phoneCorrectRejection
 }) {
   try {
-    await fetch('/save_phone_summary', {
+    const response = await fetch('/save_phone_summary', {
       method: 'POST',
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         participant_id: participantId,
@@ -83,7 +91,9 @@ export async function savePhoneSummary({
         correct_rejection: phoneCorrectRejection
       })
     });
+    return response.ok;
   } catch (error) {
     console.error('Failed to save phone summary:', error);
+    return false;
   }
 }

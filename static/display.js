@@ -34,6 +34,10 @@ function ensureLayout(attention) {
     const phonePanel = document.createElement('div');
     phonePanel.className = 'attention-panel';
 
+    const phoneInstructionEl = document.createElement('p');
+    phoneInstructionEl.className = 'phone-task-instruction';
+    phoneInstructionEl.textContent = 'Press the spacebar when you see a message about a pet.';
+
     const phoneFrame = document.createElement('div');
     phoneFrame.className = 'phone-frame';
 
@@ -49,6 +53,7 @@ function ensureLayout(attention) {
     phoneFrame.appendChild(phoneNotch);
     phoneFrame.appendChild(phoneScreen);
     phoneFrame.appendChild(phoneHome);
+    phonePanel.appendChild(phoneInstructionEl);
     phonePanel.appendChild(phoneFrame);
     wrapper.appendChild(phonePanel);
   }

@@ -45,9 +45,19 @@ body.verification-page #title {
     min-width: 280px;
     max-width: 280px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     margin-left: 100px;
+}
+
+.phone-task-instruction {
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.35;
+    margin: 0 0 12px 0;
+    width: 100%;
 }
 
 .experiment-panel {
@@ -138,6 +148,24 @@ body.verification-page #title {
 
 .phone-message.active {
     border: 2px solid #4a90e2;
+}
+
+/* .phone-message.angry-feedback {
+    /* background: #7a0010; */
+/* color: #ffffff; */
+/* border: 2px solid #4b000a; */
+/* box-shadow: 0 3px 10px rgba(122, 0, 16, 0.45);
+ } */
+
+.phone-message.angry-feedback .phone-text {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+}
+
+.phone-message.angry-feedback .phone-sender {
+    font-weight: 800;
 }
 
 .phone-message.liked-correct {

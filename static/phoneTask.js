@@ -28,7 +28,8 @@ function hasPetKeyword(text) {
 function createMessageElement(message, isActive, likedStatus) {
   const messageEl = document.createElement('div');
   const statusClass = likedStatus ? ` ${likedStatus}` : '';
-  messageEl.className = `phone-message${isActive ? ' active' : ''}${statusClass}`;
+  const angryClass = message && message.text === '😡' ? ' angry-feedback' : '';
+  messageEl.className = `phone-message${isActive ? ' active' : ''}${statusClass}${angryClass}`;
   const heartHTML = likedStatus ? '<span class="phone-heart">❤</span>' : '';
   messageEl.innerHTML = `
     <div class="phone-sender">${message.sender}${heartHTML}</div>

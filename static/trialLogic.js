@@ -53,7 +53,7 @@ export function handleArrowKeyPress(event) {
   if (response) handleResponse(response);
 }
 
-function handleResponse(response) {
+async function handleResponse(response) {
   const duration = stopTimer();
   isStimulusDisplayed = false;
 
@@ -73,7 +73,7 @@ function handleResponse(response) {
     const participantId = config.participantId || localStorage.getItem("participantId");
     if (participantId) {
       const now = new Date();
-      saveResponseToServer({
+      await saveResponseToServer({
         participantId,
         response,
         correct: isCorrect ? 1 : 0,
