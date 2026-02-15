@@ -218,6 +218,87 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
+# Participant-level condition lines: attention x lightness_mapping
+participant_accuracy <- heatmap %>%
+  group_by(participant_id, attention) %>%
+  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
+
+phone_accuracy <- if (file.exists(cfg$out_clean_phone)) {
+  readRDS(cfg$out_clean_phone) %>%
+    transmute(participant_id, phone_accuracy = phone_accuracy)
+} else {
+  tibble::tibble(participant_id = unique(heatmap$participant_id), phone_accuracy = NA_real_)
+}
+
+accuracy_eligibility <- participant_accuracy %>%
+  left_join(phone_accuracy, by = "participant_id") %>%
+  mutate(
+    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
+    phone_acc_ok = dplyr::case_when(
+      attention == "dual" ~ !is.na(phone_accuracy) & phone_accuracy >= cfg$phone_min_accuracy,
+      TRUE ~ TRUE
+    ),
+    include_for_participant_lines = heatmap_acc_ok & phone_acc_ok
+  )
+
+eligible_line_ids <- accuracy_eligibility %>%
+  filter(include_for_participant_lines) %>%
+  pull(participant_id)
+
+rt_by_participant <- heatmap %>%
+  filter(participant_id %in% eligible_line_ids, correct == 1, !is.na(lightness_mapping)) %>%
+  group_by(participant_id, attention, lightness_mapping) %>%
+  summarise(rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more"))
+  )
+
+p_rt_by_participant <- ggplot(
+  rt_by_participant,
+  aes(
+    x = lightness_mapping,
+    y = rt,
+    color = attention,
+    group = interaction(participant_id, attention)
+  )
+) +
+  geom_line(linewidth = 0.8, alpha = 0.45) +
+  geom_point(size = 1.8, alpha = 0.45) +
+  labs(
+    x = "Lightness mapping",
+    y = "Mean RT (ms) on correct trials",
+    title = "Participant RT Lines by Attention and Lightness Mapping"
+  ) +
+  theme_minimal(base_size = 12)
+
+acc_by_participant_lines <- heatmap %>%
+  filter(participant_id %in% eligible_line_ids, !is.na(lightness_mapping)) %>%
+  group_by(participant_id, attention, lightness_mapping) %>%
+  summarise(acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more"))
+  )
+
+p_acc_by_participant <- ggplot(
+  acc_by_participant_lines,
+  aes(
+    x = lightness_mapping,
+    y = acc,
+    color = attention,
+    group = interaction(participant_id, attention)
+  )
+) +
+  geom_line(linewidth = 0.8, alpha = 0.45) +
+  geom_point(size = 1.8, alpha = 0.45) +
+  labs(
+    x = "Lightness mapping",
+    y = "Mean accuracy",
+    title = "Participant Accuracy Lines by Attention and Lightness Mapping"
+  ) +
+  theme_minimal(base_size = 12)
+
 ggsave(cfg$out_fig_accuracy, p_acc, width = 7, height = 5, dpi = 300)
 ggsave(cfg$out_fig_rt, p_rt, width = 7, height = 5, dpi = 300)
 ggsave(cfg$out_fig_rt_correct_by_attention_mapping, p_rt_correct_cells, width = 10, height = 5.5, dpi = 300)
@@ -225,6 +306,8 @@ ggsave(cfg$out_fig_rt_mean_of_means_se, p_rt_mom, width = 10, height = 5.5, dpi 
 ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_rt_attention_lightness_label, p_rt_threeway, width = 12, height = 6, dpi = 300)
 ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 12, height = 6, dpi = 300)
+ggsave(cfg$out_fig_rt_by_participant_attention_mapping, p_rt_by_participant, width = 14, height = 8, dpi = 300)
+ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, width = 14, height = 8, dpi = 300)
 
 message("Saved figures to: ", dirname(cfg$out_fig_accuracy))
 message("RT figures apply inclusion criterion mean accuracy >= ", cfg$rt_min_accuracy, " (50/80).")

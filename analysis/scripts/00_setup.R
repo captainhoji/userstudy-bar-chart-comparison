@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
 # Central config: adjust file names/paths here only.
 cfg <- list(
   rt_min_accuracy = 50 / 80,
+  phone_min_accuracy = 50 / 80,
   sdt_min_dprime = 0.5,
   raw_trial_heatmap = here::here("analysis", "data_raw", "Trial_heatmap.csv"),
   raw_trial_phone = here::here("analysis", "data_raw", "Trial_phone.csv"),
@@ -32,7 +33,9 @@ cfg <- list(
   out_fig_rt_mean_of_means_se = here::here("analysis", "output", "figures", "rt_mean_of_means_se.png"),
   out_fig_acc_mean_of_means_se = here::here("analysis", "output", "figures", "accuracy_mean_of_means_se.png"),
   out_fig_rt_attention_lightness_label = here::here("analysis", "output", "figures", "rt_by_attention_lightness_label.png"),
-  out_fig_acc_attention_lightness_label = here::here("analysis", "output", "figures", "accuracy_by_attention_lightness_label.png")
+  out_fig_acc_attention_lightness_label = here::here("analysis", "output", "figures", "accuracy_by_attention_lightness_label.png"),
+  out_fig_rt_by_participant_attention_mapping = here::here("analysis", "output", "figures", "rt_by_participant_attention_lightness.png"),
+  out_fig_acc_by_participant_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_participant_attention_lightness.png")
 )
 
 print("Setup loaded. `cfg` is available in this session.")
