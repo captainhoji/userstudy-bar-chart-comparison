@@ -12,7 +12,7 @@ suppressPackageStartupMessages({
 cfg <- list(
   rt_min_accuracy = 50 / 80,
   phone_min_accuracy = 50 / 80,
-  sdt_min_dprime = 0.5,
+  sdt_min_dprime = 1.0,
   raw_trial_heatmap = here::here("analysis", "data_raw", "Trial_heatmap.csv"),
   raw_trial_phone = here::here("analysis", "data_raw", "Trial_phone.csv"),
   raw_practice = here::here("analysis", "data_raw", "Practice_heatmap.csv"),
@@ -22,6 +22,7 @@ cfg <- list(
   out_clean_ishihara = here::here("analysis", "data_processed", "ishihara_clean.rds"),
   out_clean_phone = here::here("analysis", "data_processed", "phone_clean.rds"),
   out_phone_sdt = here::here("analysis", "output", "tables", "phone_sdt_by_participant.csv"),
+  out_exclusion_summary = here::here("analysis", "output", "tables", "participant_exclusion_summary.csv"),
   out_merged = here::here("analysis", "data_processed", "analysis_dataset.rds"),
   out_rt_eligible_participants = here::here("analysis", "output", "tables", "rt_eligible_participants.csv"),
   out_sdt_eligible_participants = here::here("analysis", "output", "tables", "sdt_eligible_participants.csv"),

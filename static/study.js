@@ -3,7 +3,7 @@ import { buildHeatmapTrials, buildPracticeTrialsRandom } from './heatmapTrials.j
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
 import { addKeyHandlers, addSingleKeyHandler } from './events.js';
 import { createPhoneTask } from './phoneTask.js';
-import { savePracticeSummary, savePhoneSummary } from './trialManager.js';
+import { savePracticeSummary, savePhoneSummary, flushResponseQueue } from './trialManager.js';
 import { getPhoneScreen } from './display.js';
 import { shuffle } from './utils.js';
 
@@ -157,7 +157,10 @@ function startTrials() {
     const phoneScreen = getPhoneScreen();
     if (phoneScreen) phoneTask.attach(phoneScreen);
   };
-  if (config.attention === 'dual') phoneTask.start();
+  if (config.attention === 'dual') {
+    phoneTask.setForcePetOnNextMessage(true);
+    phoneTask.start();
+  }
   loadTrial();
 }
 
@@ -168,6 +171,7 @@ async function handleNext() {
 
   if (isLastTrial) {
     if (config.currentBlock === 'practice') {
+      await flushResponseQueue({ timeoutMs: 12000 });
       if (config.attention === 'dual') phoneTask.pause();
       const practiceAccuracy = config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal;
       const phoneStats = phoneTask.getStats();
@@ -196,12 +200,25 @@ async function handleNext() {
           : ''}
         </p>
       `;
+      const noHitWarning = (
+        config.attention === 'dual' &&
+        (phoneStats.hit || 0) === 0 &&
+        (phoneStats.miss || 0) > 0
+      )
+        ? `
+          <p style="color:#b00020;">
+            You did not like any pet-related messages. If you ignore pet-related messages again, your friends will be angry.
+            In the real trials, <strong>like pet-related messages by pressing the spacebar</strong>.
+          </p>
+        `
+        : '';
       const transitionHTML = `
         <p>
           This is the end of the practice trials.<br><br>
           Press Enter when you are ready to start the real trials.
         </p>
         ${accuracyLine}
+        ${noHitWarning}
       `;
       document.getElementById("instruction-text").innerHTML = transitionHTML;
       showInstructionsOverlay();
@@ -213,10 +230,14 @@ async function handleNext() {
         phoneTask.resetStats();
         config.realCorrects = 0;
         config.realTotal = 0;
-        if (config.attention === 'dual') phoneTask.start();
+        if (config.attention === 'dual') {
+          phoneTask.setForcePetOnNextMessage(false);
+          phoneTask.start();
+        }
         loadTrial();
       });
     } else {
+      await flushResponseQueue({ timeoutMs: 12000 });
       if (config.attention === 'dual') phoneTask.pause();
       if (config.attention === 'dual') {
         const phoneStats = phoneTask.getStats();
@@ -235,6 +256,7 @@ async function handleNext() {
       window.location.href = `/ishihara?participant_id=${encodeURIComponent(pid)}`;
     }
   } else if (needsBreak) {
+    await flushResponseQueue({ timeoutMs: 12000 });
     if (config.attention === 'dual') phoneTask.pause();
     const heatmapAccuracy = config.currentBlock === 'practice'
       ? (config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal)

@@ -42,6 +42,7 @@ export function createPhoneTask() {
   let container = null;
   let showTimerId = null;
   let hideTimerId = null;
+  let angryTimerId = null;
   let messageIndex = 0;
   let phoneChunkIndex = 0;
   let phoneMessageIndex = 0;
@@ -61,6 +62,7 @@ export function createPhoneTask() {
   let lastPetId = null;
   let petCycleCompleted = false;
   let loadPromise = null;
+  let forcePetOnNextMessage = false;
 
   function parsePhoneCsv(text) {
     const lines = text.trim().split('\n');
@@ -243,9 +245,11 @@ export function createPhoneTask() {
     if (!active) return;
     if (showTimerId) window.clearTimeout(showTimerId);
     if (hideTimerId) window.clearTimeout(hideTimerId);
+    if (angryTimerId) window.clearTimeout(angryTimerId);
     const delay = PHONE_TIMING.GAP_MIN_MS + Math.random() * (PHONE_TIMING.GAP_MAX_MS - PHONE_TIMING.GAP_MIN_MS);
     showTimerId = window.setTimeout(() => {
-      const usePet = Math.random() < 0.4;
+      const usePet = forcePetOnNextMessage ? true : Math.random() < 0.4;
+      forcePetOnNextMessage = false;
       const nextMessage = usePet ? getNextPetMessage() : getNextPhoneMessage();
       currentMessage = nextMessage || getNextPhoneMessage() || getNextPetMessage();
       if (!currentMessage) return;
@@ -260,10 +264,11 @@ export function createPhoneTask() {
         if (currentShouldLike && !currentLiked) {
           const angryMessage = { sender: currentMessage.sender, text: "😡", isPet: false };
           renderMessages([currentMessage, angryMessage]);
-          window.setTimeout(() => {
+          angryTimerId = window.setTimeout(() => {
             renderMessages(null);
             clearCurrentMessageState();
             scheduleNextMessage();
+            angryTimerId = null;
           }, 2000);
         } else {
           renderMessages(null);
@@ -287,11 +292,9 @@ export function createPhoneTask() {
 
   return {
     attach(screenElement) {
+      if (container === screenElement) return;
       container = screenElement;
-      if (container) {
-        container.innerHTML = '';
-        if (currentMessage) renderMessages(currentMessage);
-      }
+      if (container && currentMessage) renderMessages(currentMessage);
     },
     start() {
       if (active) return;
@@ -306,9 +309,10 @@ export function createPhoneTask() {
       active = false;
       if (showTimerId) window.clearTimeout(showTimerId);
       if (hideTimerId) window.clearTimeout(hideTimerId);
+      if (angryTimerId) window.clearTimeout(angryTimerId);
       showTimerId = null;
       hideTimerId = null;
-      resolveCurrentMessage();
+      angryTimerId = null;
       clearCurrentMessageState();
       document.removeEventListener('keydown', handleLikeKey);
     },
@@ -334,6 +338,9 @@ export function createPhoneTask() {
     getStats() {
       const accuracy = stats.total === 0 ? null : stats.correct / stats.total;
       return { ...stats, accuracy };
+    },
+    setForcePetOnNextMessage(shouldForce) {
+      forcePetOnNextMessage = !!shouldForce;
     }
   };
 }

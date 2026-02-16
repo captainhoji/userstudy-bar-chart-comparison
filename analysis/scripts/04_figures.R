@@ -223,22 +223,24 @@ participant_accuracy <- heatmap %>%
   group_by(participant_id, attention) %>%
   summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
 
-phone_accuracy <- if (file.exists(cfg$out_clean_phone)) {
+phone_sdt <- if (file.exists(cfg$out_clean_phone)) {
   readRDS(cfg$out_clean_phone) %>%
-    transmute(participant_id, phone_accuracy = phone_accuracy)
+    transmute(participant_id, d_prime = d_prime)
 } else {
-  tibble::tibble(participant_id = unique(heatmap$participant_id), phone_accuracy = NA_real_)
+  tibble::tibble(participant_id = unique(heatmap$participant_id), d_prime = NA_real_)
 }
 
 accuracy_eligibility <- participant_accuracy %>%
-  left_join(phone_accuracy, by = "participant_id") %>%
+  left_join(phone_sdt, by = "participant_id") %>%
   mutate(
+    phone_data_missing = attention == "dual" & is.na(d_prime),
+    d_prime = dplyr::if_else(attention == "dual" & is.na(d_prime), 0, d_prime),
     heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
-    phone_acc_ok = dplyr::case_when(
-      attention == "dual" ~ !is.na(phone_accuracy) & phone_accuracy >= cfg$phone_min_accuracy,
+    phone_sdt_ok = dplyr::case_when(
+      attention == "dual" ~ d_prime >= cfg$sdt_min_dprime,
       TRUE ~ TRUE
     ),
-    include_for_participant_lines = heatmap_acc_ok & phone_acc_ok
+    include_for_participant_lines = heatmap_acc_ok & phone_sdt_ok
   )
 
 eligible_line_ids <- accuracy_eligibility %>%

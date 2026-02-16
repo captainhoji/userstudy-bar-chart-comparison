@@ -24,19 +24,14 @@ export function loadTrial() {
     duration: 500,
     attention: config.attention,
     onDone: () => {
-      if (typeof config.onPhoneScreenReady === 'function') {
-        config.onPhoneScreenReady();
-      }
-    displayHeatmapTrial({
-      trial: trialData,
-      scale: localStorage.getItem("scale") || 1,
-      attention: config.attention
-    });
-    if (typeof config.onPhoneScreenReady === 'function') {
-      config.onPhoneScreenReady();
-    }
-    addKeyHandlers(null, handleArrowKeyPress);
-    isStimulusDisplayed = true;
+      if (typeof config.onPhoneScreenReady === 'function') config.onPhoneScreenReady();
+      displayHeatmapTrial({
+        trial: trialData,
+        scale: localStorage.getItem("scale") || 1,
+        attention: config.attention
+      });
+      addKeyHandlers(null, handleArrowKeyPress);
+      isStimulusDisplayed = true;
     }
   });
 }
@@ -73,7 +68,7 @@ async function handleResponse(response) {
     const participantId = config.participantId || localStorage.getItem("participantId");
     if (participantId) {
       const now = new Date();
-      await saveResponseToServer({
+      saveResponseToServer({
         participantId,
         response,
         correct: isCorrect ? 1 : 0,

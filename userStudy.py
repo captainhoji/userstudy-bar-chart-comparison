@@ -231,6 +231,42 @@ def save_response():
     return jsonify({'message': 'Error saving response'}), 400
 
 
+@app.route('/save_responses_batch', methods=['POST'])
+def save_responses_batch():
+    data = request.get_json() or {}
+    responses = data.get('responses') or []
+
+    if not isinstance(responses, list) or len(responses) == 0:
+        return jsonify({'message': 'No responses provided'}), 400
+
+    fields = [
+        "participant_id",
+        "duration",
+        "response_time",
+        "correct",
+        "trial_number",
+        "stimuli_number",
+        "response",
+        "heatmap_condition",
+        "legend_condition",
+        "label_condition",
+        "attention",
+        "time_when"
+    ]
+
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        for row in responses:
+            values = [row.get(field) for field in fields]
+            insert_row(cursor, "Trial_heatmap", fields, values)
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Responses saved successfully', 'count': len(responses)}), 200
+
+    return jsonify({'message': 'Error saving responses batch'}), 400
+
+
 @app.route("/thank_you")
 def thank_you():
     return render_template("thank_you.html")
