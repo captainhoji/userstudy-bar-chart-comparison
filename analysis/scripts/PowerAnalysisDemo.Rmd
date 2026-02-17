@@ -1,0 +1,150 @@
+---
+title: "Power Analyses"
+author: "Kushin Mukherjee"
+date: "2025-02-25"
+output: html_document
+---
+
+```{r}
+# Load required libraries
+library(lme4)    # For mixed effects models
+library(simr)    # For power analysis
+library(ggplot2) # For plotting
+library(dplyr)   # For data manipulation
+library(tidyr)   # For reshaping data
+library(lmerTest)
+```
+Load and clean heatmap trials data
+```{r}
+suppressPackageStartupMessages(library(here))
+source(here::here("analysis", "scripts", "00_setup.R"))
+
+if (!file.exists(cfg$out_clean_heatmap)) {
+  stop("Run 01_clean_trials.R first.")
+}
+
+heatmap <- readRDS(cfg$out_clean_heatmap) %>%
+  mutate(attention = factor(attention, levels = c("single", "dual")))
+
+participant_accuracy <- heatmap %>%
+  group_by(participant_id, attention) %>%
+  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
+
+phone_sdt <- if (file.exists(cfg$out_clean_phone)) {
+  readRDS(cfg$out_clean_phone) %>%
+    transmute(participant_id, d_prime = d_prime)
+} else {
+  tibble::tibble(participant_id = unique(heatmap$participant_id), d_prime = NA_real_)
+}
+
+accuracy_eligibility <- participant_accuracy %>%
+  left_join(phone_sdt, by = "participant_id") %>%
+  mutate(
+    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
+    phone_sdt_ok = dplyr::case_when(
+      attention == "dual" ~ !is.na(d_prime) & d_prime >= cfg$sdt_min_dprime,
+      TRUE ~ TRUE
+    ),
+    include_for_plots = heatmap_acc_ok & phone_sdt_ok
+  )
+
+eligible_ids <- accuracy_eligibility %>%
+  filter(include_for_plots) %>%
+  pull(participant_id)
+
+heatmap_filtered <- heatmap %>%
+  filter(participant_id %in% eligible_ids)
+```
+
+### fit the model
+```{r}
+heatmap_filtered$attention_c<- case_when(
+  heatmap_filtered$attention == "single" ~ -0.5,
+  heatmap_filtered$attention ==  "dual" ~ 0.5
+)
+heatmap_filtered$label_condition_c<- case_when(
+  heatmap_filtered$label_condition == "fewer-up" ~ -0.5,
+  heatmap_filtered$label_condition ==  "greater-up" ~ 0.5
+)
+heatmap_filtered$lightness_mapping_c<- case_when(
+  heatmap_filtered$lightness_mapping == "light-more" ~ -0.5,
+  heatmap_filtered$lightness_mapping ==  "dark-more" ~ 0.5
+)
+
+# Build 4 blocks from stimuli_number:
+# 0-19 -> 1, 20-39 -> 2, 40-59 -> 3, 60-79 -> 4
+heatmap_filtered$stimuli_number <- as.numeric(heatmap_filtered$stimuli_number)
+heatmap_filtered$block <- dplyr::case_when(
+  heatmap_filtered$stimuli_number >= 0  & heatmap_filtered$stimuli_number <= 19 ~ 1,
+  heatmap_filtered$stimuli_number >= 20 & heatmap_filtered$stimuli_number <= 39 ~ 2,
+  heatmap_filtered$stimuli_number >= 40 & heatmap_filtered$stimuli_number <= 59 ~ 3,
+  heatmap_filtered$stimuli_number >= 60 & heatmap_filtered$stimuli_number <= 79 ~ 4,
+  TRUE ~ NA_real_
+)
+heatmap_filtered$block <- as.factor(heatmap_filtered$block)
+
+# Numeric centered block covariate for mixed model / simulation convenience
+heatmap_filtered$block_num <- as.numeric(as.character(heatmap_filtered$block))
+heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, scale = FALSE)[, 1]
+
+
+m1_all_blocks <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c + block_c +
+    (1 + label_condition_c*lightness_mapping_c | participant_id), 
+  data = heatmap_filtered,
+  family = binomial("logit"),
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+summary(m1_all_blocks)
+
+# Model using only first two blocks (stimuli_number 0-39)
+heatmap_first2 <- heatmap_filtered %>%
+  dplyr::filter(!is.na(block_num), block_num <= 2)
+
+m1_first2_blocks <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c + block_c +
+    (1 + label_condition_c*lightness_mapping_c | participant_id), 
+  data = heatmap_first2,
+  family = binomial("logit"),
+  control = glmerControl(optimizer = "bobyqa")
+)
+
+summary(m1_first2_blocks)
+
+```
+
+### Simulation using mixedpower
+
+```{r}
+if (!require("devtools")) {
+    install.packages("devtools", dependencies = TRUE)}
+devtools::install_github("DejanDraschkow/mixedpower") # mixedpower is hosted on GitHub
+
+# load library
+library(mixedpower)
+
+model <- m1_first2_blocks # use first-two-block model for power simulation
+heatmap_first2$participant_id_num <- as.numeric(factor(heatmap_first2$participant_id))
+data <- heatmap_first2 # data used to fit the model
+fixed_effects <- c("label_condition_c","lightness_mapping_c","attention_c","block_c")
+simvar <- "participant_id_num" # which random effect do we want to vary in the simulation?
+
+
+# SIMULATION PARAMETERS
+steps <- c(20, 40, 60, 80) # which sample sizes do we want to look at?
+critical_value <- 1.96 # which t/z value do we want to use to test for significance?
+n_sim <- 50 # how many single simulations should be used to estimate power?
+
+
+power_analysis_results <- mixedpower(model = model, data = data,
+                        fixed_effects = fixed_effects,
+                        simvar = simvar, steps =steps,
+                        critical_value = critical_value, n_sim = n_sim)
+
+power_analysis_results
+
+# multiplotPower(power_analysis_results)
+multiplotPower(power_analysis_results, ppi = 300, filename = "../output/power_analysis_acc.png")
+
+```

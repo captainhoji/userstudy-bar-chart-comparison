@@ -36,7 +36,9 @@ cfg <- list(
   out_fig_rt_attention_lightness_label = here::here("analysis", "output", "figures", "rt_by_attention_lightness_label.png"),
   out_fig_acc_attention_lightness_label = here::here("analysis", "output", "figures", "accuracy_by_attention_lightness_label.png"),
   out_fig_rt_by_participant_attention_mapping = here::here("analysis", "output", "figures", "rt_by_participant_attention_lightness.png"),
-  out_fig_acc_by_participant_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_participant_attention_lightness.png")
+  out_fig_acc_by_participant_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_participant_attention_lightness.png"),
+  out_fig_rt_by_block_attention_mapping = here::here("analysis", "output", "figures", "rt_by_block_attention_lightness.png"),
+  out_fig_acc_by_block_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_block_attention_lightness.png")
 )
 
 print("Setup loaded. `cfg` is available in this session.")

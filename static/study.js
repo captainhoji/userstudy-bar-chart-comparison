@@ -55,7 +55,7 @@ export async function initializeStudy(participantId, attention) {
     </div>
     <p>
       The four examples above (left to right) have answers: <b>Right, Left, Right, Left</b>.<br>
-      Note that the legend and labels change, so please check the legend on <b>every trial</b>
+      Note that the legend and labels change, so please <b>check the legend on every trial</b>
       to know whether darker colors mean greater or fewer values.<br><br>
       If your response is incorrect, <b>“Incorrect”</b> will briefly appear in red above the colormap.<br>
       You will also be notified of your accuracy periodically.<br><br>
@@ -212,12 +212,23 @@ async function handleNext() {
           </p>
         `
         : '';
+      const lowColormapWarning = (
+        practiceAccuracy !== null &&
+        practiceAccuracy < 0.75
+      )
+        ? `
+          <p style="color:#b00020;">
+            Your accuracy on the colormap task is too low. Pleae <b>read the legend</b> and select the <b>side that shows greater values</b>.
+          </p>
+        `
+        : '';
       const transitionHTML = `
         <p>
           This is the end of the practice trials.<br><br>
           Press Enter when you are ready to start the real trials.
         </p>
         ${accuracyLine}
+        ${lowColormapWarning}
         ${noHitWarning}
       `;
       document.getElementById("instruction-text").innerHTML = transitionHTML;
