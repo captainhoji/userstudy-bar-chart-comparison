@@ -11,8 +11,7 @@ suppressPackageStartupMessages({
 # Central config: adjust file names/paths here only.
 cfg <- list(
   rt_min_accuracy = 50 / 80,
-  phone_min_accuracy = 50 / 80,
-  sdt_min_dprime = 1.0,
+  sdt_ci_z = 1.96,
   raw_trial_heatmap = here::here("analysis", "data_raw", "Trial_heatmap.csv"),
   raw_trial_phone = here::here("analysis", "data_raw", "Trial_phone.csv"),
   raw_practice = here::here("analysis", "data_raw", "Practice_heatmap.csv"),

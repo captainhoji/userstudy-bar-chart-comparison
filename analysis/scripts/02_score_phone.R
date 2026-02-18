@@ -42,6 +42,26 @@ phone <- readr::read_csv(cfg$raw_trial_phone, show_col_types = FALSE) %>%
       qnorm(hit_rate_corr) - qnorm(fa_rate_corr),
       NA_real_
     ),
+    z_hit = dplyr::if_else(!is.na(hit_rate_corr), qnorm(hit_rate_corr), NA_real_),
+    z_fa = dplyr::if_else(!is.na(fa_rate_corr), qnorm(fa_rate_corr), NA_real_),
+    phi_z_hit = dplyr::if_else(!is.na(z_hit), dnorm(z_hit), NA_real_),
+    phi_z_fa = dplyr::if_else(!is.na(z_fa), dnorm(z_fa), NA_real_),
+    n_signal = hit + miss,
+    n_noise = false_alarm + correct_rejection,
+    var_d_prime = dplyr::if_else(
+      n_signal > 0 & n_noise > 0 & phi_z_hit > 0 & phi_z_fa > 0,
+      (hit_rate_corr * (1 - hit_rate_corr)) / (n_signal * (phi_z_hit ^ 2)) +
+        (fa_rate_corr * (1 - fa_rate_corr)) / (n_noise * (phi_z_fa ^ 2)),
+      NA_real_
+    ),
+    se_d_prime = dplyr::if_else(!is.na(var_d_prime) & var_d_prime >= 0, sqrt(var_d_prime), NA_real_),
+    d_prime_ci_low = dplyr::if_else(!is.na(se_d_prime), d_prime - cfg$sdt_ci_z * se_d_prime, NA_real_),
+    d_prime_ci_high = dplyr::if_else(!is.na(se_d_prime), d_prime + cfg$sdt_ci_z * se_d_prime, NA_real_),
+    d_prime_ci_excludes_zero = dplyr::if_else(
+      !is.na(d_prime_ci_low) & !is.na(d_prime_ci_high),
+      (d_prime_ci_low > 0) | (d_prime_ci_high < 0),
+      FALSE
+    ),
     criterion_c = dplyr::if_else(
       !is.na(hit_rate_corr) & !is.na(fa_rate_corr),
       -0.5 * (qnorm(hit_rate_corr) + qnorm(fa_rate_corr)),

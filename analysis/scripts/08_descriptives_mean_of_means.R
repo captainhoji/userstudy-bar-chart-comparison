@@ -8,33 +8,9 @@ if (!file.exists(cfg$out_clean_heatmap)) {
 heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
-phone_sdt <- if (file.exists(cfg$out_clean_phone)) {
-  readRDS(cfg$out_clean_phone) %>%
-    transmute(participant_id, d_prime = as.numeric(d_prime))
-} else {
-  tibble::tibble(participant_id = unique(heatmap$participant_id), d_prime = NA_real_)
-}
-
-# Main exclusion rule (same spirit as 04_figures.R):
-# - heatmap mean accuracy >= cfg$rt_min_accuracy
-# - for dual participants, d' >= cfg$sdt_min_dprime
-participant_accuracy <- heatmap %>%
-  group_by(participant_id, attention) %>%
-  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
-
-eligibility <- participant_accuracy %>%
-  left_join(phone_sdt, by = "participant_id") %>%
-  mutate(
-    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
-    phone_sdt_ok = dplyr::case_when(
-      attention == "dual" ~ !is.na(d_prime) & d_prime >= cfg$sdt_min_dprime,
-      TRUE ~ TRUE
-    ),
-    include = heatmap_acc_ok & phone_sdt_ok
-  )
-
-eligible_ids <- eligibility %>%
-  filter(include) %>%
+eligible_ids <- heatmap %>%
+  filter(!exclude_tier1) %>%
+  distinct(participant_id) %>%
   pull(participant_id)
 
 dat <- heatmap %>%

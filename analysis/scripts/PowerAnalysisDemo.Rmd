@@ -26,71 +26,72 @@ if (!file.exists(cfg$out_clean_heatmap)) {
 heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
-participant_accuracy <- heatmap %>%
-  group_by(participant_id, attention) %>%
-  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
-
-phone_sdt <- if (file.exists(cfg$out_clean_phone)) {
-  readRDS(cfg$out_clean_phone) %>%
-    transmute(participant_id, d_prime = d_prime)
-} else {
-  tibble::tibble(participant_id = unique(heatmap$participant_id), d_prime = NA_real_)
-}
-
-accuracy_eligibility <- participant_accuracy %>%
-  left_join(phone_sdt, by = "participant_id") %>%
-  mutate(
-    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
-    phone_sdt_ok = dplyr::case_when(
-      attention == "dual" ~ !is.na(d_prime) & d_prime >= cfg$sdt_min_dprime,
-      TRUE ~ TRUE
-    ),
-    include_for_plots = heatmap_acc_ok & phone_sdt_ok
-  )
-
-eligible_ids <- accuracy_eligibility %>%
-  filter(include_for_plots) %>%
+eligible_ids <- heatmap %>%
+  filter(!exclude_tier1) %>%
+  distinct(participant_id) %>%
   pull(participant_id)
 
 heatmap_filtered <- heatmap %>%
   filter(participant_id %in% eligible_ids)
+
+# Duration-based outlier exclusion
+# 1) Exclude participants whose mean duration is outside +/- 2 SD of
+#    the distribution of participant mean durations.
+# 2) Within the remaining participants, exclude trials outside +/- 2 SD
+#    of each participant's own mean duration.
+duration_col <- if ("duration" %in% names(heatmap_filtered)) {
+  "duration"
+} else if ("response_time" %in% names(heatmap_filtered)) {
+  "response_time"
+} else {
+  stop("No duration-like column found. Need `duration` or `response_time`.")
+}
+
+heatmap_filtered <- heatmap_filtered %>%
+  mutate(duration_for_filter = as.numeric(.data[[duration_col]])) %>%
+  filter(!is.na(duration_for_filter), is.finite(duration_for_filter))
+
+participant_duration <- heatmap_filtered %>%
+  group_by(participant_id) %>%
+  summarise(mean_duration = mean(duration_for_filter, na.rm = TRUE), .groups = "drop")
+
+group_mean_duration <- mean(participant_duration$mean_duration, na.rm = TRUE)
+group_sd_duration <- sd(participant_duration$mean_duration, na.rm = TRUE)
+
+participant_keep <- participant_duration %>%
+  mutate(
+    keep_participant = mean_duration >= (group_mean_duration - 2 * group_sd_duration) &
+      mean_duration <= (group_mean_duration + 2 * group_sd_duration)
+  ) %>%
+  filter(keep_participant) %>%
+  pull(participant_id)
+
+### THIS IS FOR EXCLUDING OUTLIERS
+# heatmap_filtered <- heatmap_filtered %>%
+#   filter(participant_id %in% participant_keep) %>%
+#   group_by(participant_id) %>%
+#   mutate(
+#     p_mean_duration = mean(duration_for_filter, na.rm = TRUE),
+#     p_sd_duration = sd(duration_for_filter, na.rm = TRUE),
+#     keep_trial = duration_for_filter >= (p_mean_duration - 2 * p_sd_duration) &
+#       duration_for_filter <= (p_mean_duration + 2 * p_sd_duration)
+#   ) %>%
+#   ungroup() %>%
+#   filter(keep_trial) %>%
+#   select(-duration_for_filter, -p_mean_duration, -p_sd_duration, -keep_trial)
 ```
 
 ### fit the model
 ```{r}
-heatmap_filtered$attention_c<- case_when(
-  heatmap_filtered$attention == "single" ~ -0.5,
-  heatmap_filtered$attention ==  "dual" ~ 0.5
-)
-heatmap_filtered$label_condition_c<- case_when(
-  heatmap_filtered$label_condition == "fewer-up" ~ -0.5,
-  heatmap_filtered$label_condition ==  "greater-up" ~ 0.5
-)
-heatmap_filtered$lightness_mapping_c<- case_when(
-  heatmap_filtered$lightness_mapping == "light-more" ~ -0.5,
-  heatmap_filtered$lightness_mapping ==  "dark-more" ~ 0.5
-)
-
-# Build 4 blocks from stimuli_number:
-# 0-19 -> 1, 20-39 -> 2, 40-59 -> 3, 60-79 -> 4
-heatmap_filtered$stimuli_number <- as.numeric(heatmap_filtered$stimuli_number)
-heatmap_filtered$block <- dplyr::case_when(
-  heatmap_filtered$stimuli_number >= 0  & heatmap_filtered$stimuli_number <= 19 ~ 1,
-  heatmap_filtered$stimuli_number >= 20 & heatmap_filtered$stimuli_number <= 39 ~ 2,
-  heatmap_filtered$stimuli_number >= 40 & heatmap_filtered$stimuli_number <= 59 ~ 3,
-  heatmap_filtered$stimuli_number >= 60 & heatmap_filtered$stimuli_number <= 79 ~ 4,
-  TRUE ~ NA_real_
-)
-heatmap_filtered$block <- as.factor(heatmap_filtered$block)
-
-# Numeric centered block covariate for mixed model / simulation convenience
-heatmap_filtered$block_num <- as.numeric(as.character(heatmap_filtered$block))
+if (!all(c("attention_c", "label_condition_c", "lightness_mapping_c", "block_num") %in% names(heatmap_filtered))) {
+  stop("Missing centralized contrast/block columns. Re-run analysis/scripts/01_clean_trials.R.")
+}
 heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, scale = FALSE)[, 1]
 
 
 m1_all_blocks <- glmer(
-  correct ~ label_condition_c*lightness_mapping_c*attention_c + block_c +
-    (1 + label_condition_c*lightness_mapping_c | participant_id), 
+  correct ~ label_condition_c*lightness_mapping_c*attention_c*block_c +
+    (1 + label_condition_c*lightness_mapping_c + block_c | participant_id), 
   data = heatmap_filtered,
   family = binomial("logit"),
   control = glmerControl(optimizer = "bobyqa")
@@ -103,7 +104,7 @@ heatmap_first2 <- heatmap_filtered %>%
   dplyr::filter(!is.na(block_num), block_num <= 2)
 
 m1_first2_blocks <- glmer(
-  correct ~ label_condition_c*lightness_mapping_c*attention_c + block_c +
+  correct ~ label_condition_c*lightness_mapping_c*attention_c +
     (1 + label_condition_c*lightness_mapping_c | participant_id), 
   data = heatmap_first2,
   family = binomial("logit"),
@@ -124,27 +125,27 @@ devtools::install_github("DejanDraschkow/mixedpower") # mixedpower is hosted on 
 # load library
 library(mixedpower)
 
-model <- m1_first2_blocks # use first-two-block model for power simulation
-heatmap_first2$participant_id_num <- as.numeric(factor(heatmap_first2$participant_id))
-data <- heatmap_first2 # data used to fit the model
+model <- m1_all_blocks # use first-two-block model for power simulation
+heatmap_filtered$participant_id_num <- as.numeric(factor(heatmap_filtered$participant_id))
+data <- heatmap_filtered # data used to fit the model
 fixed_effects <- c("label_condition_c","lightness_mapping_c","attention_c","block_c")
 simvar <- "participant_id_num" # which random effect do we want to vary in the simulation?
 
 
 # SIMULATION PARAMETERS
-steps <- c(20, 40, 60, 80) # which sample sizes do we want to look at?
+steps <- c(20, 40, 60, 80, 100) # which sample sizes do we want to look at?
 critical_value <- 1.96 # which t/z value do we want to use to test for significance?
 n_sim <- 50 # how many single simulations should be used to estimate power?
 
 
 power_analysis_results <- mixedpower(model = model, data = data,
                         fixed_effects = fixed_effects,
-                        simvar = simvar, steps =steps,
+                        simvar = simvar, steps = steps,
                         critical_value = critical_value, n_sim = n_sim)
 
 power_analysis_results
 
 # multiplotPower(power_analysis_results)
-multiplotPower(power_analysis_results, ppi = 300, filename = "../output/power_analysis_acc.png")
+multiplotPower(power_analysis_results, ppi = 300, filename = "../output/power_analysis3_acc_wBlock_woExclusions.png")
 
 ```

@@ -26,35 +26,13 @@ out_power_acc_fig <- here::here("analysis", "output", "figures", "power_curve_at
 if (!file.exists(cfg$out_clean_heatmap)) {
   stop("Missing heatmap data. Run 01_clean_trials.R first.")
 }
-if (!file.exists(cfg$out_clean_phone)) {
-  stop("Missing phone SDT data. Run 02_score_phone.R first.")
-}
 
 heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = as.character(attention))
 
-phone <- readRDS(cfg$out_clean_phone) %>%
-  transmute(participant_id = as.character(participant_id), d_prime = as.numeric(d_prime))
-
-# Same participant inclusion rule used in current plotting scripts:
-# include if heatmap accuracy threshold passes AND (dual -> d' threshold passes)
-participant_accuracy <- heatmap %>%
-  group_by(participant_id, attention) %>%
-  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
-
-eligibility <- participant_accuracy %>%
-  left_join(phone, by = "participant_id") %>%
-  mutate(
-    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
-    phone_sdt_ok = case_when(
-      attention == "dual" ~ !is.na(d_prime) & d_prime >= cfg$sdt_min_dprime,
-      TRUE ~ TRUE
-    ),
-    include = heatmap_acc_ok & phone_sdt_ok
-  )
-
-eligible_ids <- eligibility %>%
-  filter(include) %>%
+eligible_ids <- heatmap %>%
+  filter(!exclude_tier1) %>%
+  distinct(participant_id) %>%
   pull(participant_id)
 
 analysis_data <- heatmap %>%

@@ -207,8 +207,8 @@ async function handleNext() {
       )
         ? `
           <p style="color:#b00020;">
-            You did not like any pet-related messages. If you ignore pet-related messages again, your friends will be angry.
-            In the real trials, <strong>like pet-related messages by pressing the spacebar</strong>.
+            You did not like any pet-related messages. If you ignore pet-related messages again, your friends will be angry.<br>
+            Please <strong>like pet-related messages by pressing the spacebar</strong>.
           </p>
         `
         : '';
@@ -218,7 +218,7 @@ async function handleNext() {
       )
         ? `
           <p style="color:#b00020;">
-            Your accuracy on the colormap task is too low. Pleae <b>read the legend</b> and select the <b>side that shows greater values</b>.
+            Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side that shows greater values</b>.
           </p>
         `
         : '';

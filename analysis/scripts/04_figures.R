@@ -8,30 +8,9 @@ if (!file.exists(cfg$out_clean_heatmap)) {
 heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
-participant_accuracy <- heatmap %>%
-  group_by(participant_id, attention) %>%
-  summarise(heatmap_accuracy = mean(correct, na.rm = TRUE), .groups = "drop")
-
-phone_sdt <- if (file.exists(cfg$out_clean_phone)) {
-  readRDS(cfg$out_clean_phone) %>%
-    transmute(participant_id, d_prime = d_prime)
-} else {
-  tibble::tibble(participant_id = unique(heatmap$participant_id), d_prime = NA_real_)
-}
-
-accuracy_eligibility <- participant_accuracy %>%
-  left_join(phone_sdt, by = "participant_id") %>%
-  mutate(
-    heatmap_acc_ok = heatmap_accuracy >= cfg$rt_min_accuracy,
-    phone_sdt_ok = dplyr::case_when(
-      attention == "dual" ~ !is.na(d_prime) & d_prime >= cfg$sdt_min_dprime,
-      TRUE ~ TRUE
-    ),
-    include_for_plots = heatmap_acc_ok & phone_sdt_ok
-  )
-
-eligible_ids <- accuracy_eligibility %>%
-  filter(include_for_plots) %>%
+eligible_ids <- heatmap %>%
+  filter(!exclude_tier3) %>%
+  distinct(participant_id) %>%
   pull(participant_id)
 
 heatmap_filtered <- heatmap %>%
@@ -104,6 +83,7 @@ p_rt_mom <- ggplot(rt_mom, aes(x = cell, y = mean_of_means_rt, fill = lightness_
     width = 0.18,
     linewidth = 0.7
   ) +
+  coord_cartesian(ylim = c(1250, 2500)) +
   labs(
     x = "Condition",
     y = "Mean of participant mean RT (ms)",
@@ -137,6 +117,7 @@ p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_acc, fill = lightne
     width = 0.18,
     linewidth = 0.7
   ) +
+  coord_cartesian(ylim = c(0.8, 1.0)) +
   labs(
     x = "Condition",
     y = "Mean of participant mean accuracy",
@@ -172,6 +153,7 @@ p_rt_threeway <- ggplot(rt_threeway, aes(x = lightness_mapping, y = mean_of_mean
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
   ) +
+  coord_cartesian(ylim = c(1250, 2500)) +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -208,6 +190,7 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
   ) +
+  coord_cartesian(ylim = c(0.8, 1.0)) +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -274,14 +257,10 @@ p_acc_by_participant <- ggplot(
 # Block-wise figures:
 # block 1: stimuli_number 0-19, block 2: 20-39, block 3: 40-59, block 4: 60-79
 block_data <- heatmap_filtered %>%
-  mutate(
-    trial_number = suppressWarnings(as.numeric(trial_number)),
-    block = floor(trial_number / 20) + 1
-  ) %>%
-  filter(!is.na(block), block >= 1, block <= 4, !is.na(lightness_mapping)) %>%
+  filter(!is.na(block_num), block_num >= 1, block_num <= 4, !is.na(lightness_mapping)) %>%
   mutate(
     condition = interaction(attention, lightness_mapping, sep = " | ", lex.order = TRUE),
-    block = factor(block, levels = c(1, 2, 3, 4))
+    block = factor(block_num, levels = c(1, 2, 3, 4))
   )
 
 rt_block <- block_data %>%
@@ -331,4 +310,4 @@ ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, heig
 
 message("Saved figures to: ", dirname(cfg$out_fig_accuracy))
 message("RT figures apply inclusion criterion mean accuracy >= ", cfg$rt_min_accuracy, " (50/80).")
-message("All figures exclude participants with d' < ", cfg$sdt_min_dprime, ".")
+message("All figures exclude dual participants whose d' 95% CI includes 0.")
