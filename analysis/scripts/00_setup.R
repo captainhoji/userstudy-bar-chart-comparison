@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
 
 # Central config: adjust file names/paths here only.
 cfg <- list(
-  rt_min_accuracy = 50 / 80,
+  rt_min_accuracy = 50 / 80, # 50 / 80,
   sdt_ci_z = 1.96,
   raw_trial_heatmap = here::here("analysis", "data_raw", "Trial_heatmap.csv"),
   raw_trial_phone = here::here("analysis", "data_raw", "Trial_phone.csv"),
@@ -32,10 +32,13 @@ cfg <- list(
   out_fig_rt_correct_by_attention_mapping = here::here("analysis", "output", "figures", "rt_correct_by_attention_lightness_mapping.png"),
   out_fig_rt_mean_of_means_se = here::here("analysis", "output", "figures", "rt_mean_of_means_se.png"),
   out_fig_acc_mean_of_means_se = here::here("analysis", "output", "figures", "accuracy_mean_of_means_se.png"),
+  out_fig_rt_mean_of_means_se_label = here::here("analysis", "output", "figures", "rt_mean_of_means_se_by_label.png"),
+  out_fig_acc_mean_of_means_se_label = here::here("analysis", "output", "figures", "accuracy_mean_of_means_se_by_label.png"),
   out_fig_rt_attention_lightness_label = here::here("analysis", "output", "figures", "rt_by_attention_lightness_label.png"),
   out_fig_acc_attention_lightness_label = here::here("analysis", "output", "figures", "accuracy_by_attention_lightness_label.png"),
   out_fig_rt_by_participant_attention_mapping = here::here("analysis", "output", "figures", "rt_by_participant_attention_lightness.png"),
   out_fig_acc_by_participant_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_participant_attention_lightness.png"),
+  out_fig_acc_by_participant_label = here::here("analysis", "output", "figures", "accuracy_by_participant_label_lightness.png"),
   out_fig_rt_by_block_attention_mapping = here::here("analysis", "output", "figures", "rt_by_block_attention_lightness.png"),
   out_fig_acc_by_block_attention_mapping = here::here("analysis", "output", "figures", "accuracy_by_block_attention_lightness.png")
 )

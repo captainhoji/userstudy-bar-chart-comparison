@@ -13,11 +13,10 @@ if (!file.exists(cfg$out_clean_heatmap)) {
   stop("Run 01_clean_trials.R first.")
 }
 
-heatmap <- readRDS(cfg$out_clean_heatmap) %>%
-  mutate(attention = factor(attention, levels = c("single", "dual")))
+heatmap <- readRDS(cfg$out_clean_heatmap)
 
 eligible_ids <- heatmap %>%
-  filter(!exclude_tier1) %>%
+  filter(!exclude_tier_000) %>%
   distinct(participant_id) %>%
   pull(participant_id)
 
@@ -27,12 +26,24 @@ heatmap_filtered <- heatmap %>%
 heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, scale = FALSE)[, 1]
 
 m1_all_blocks <- glmer(
-  correct ~ label_condition_c*lightness_mapping_c*attention_c +
-    (1 + label_condition_c*lightness_mapping_c | participant_id), 
+  correct ~ label_condition_c*lightness_mapping_c*attention_c
+  + (1 + label_condition_c*lightness_mapping_c || participant_id),
   data = heatmap_filtered,
   family = binomial("logit"),
-  control = glmerControl(optimizer = "bobyqa")
+  control = glmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
 )
+
+# m1_all_blocks <- lmer(
+#   duration ~ label_condition_c*lightness_mapping_c*attention_c +
+#     (1 + label_condition_c + lightness_mapping_c || participant_id),
+#   data = heatmap_filtered,
+#   control = lmerControl(optimizer = "bobyqa")
+# )
+
+summary(m1_all_blocks)
 
 if (!require("devtools")) {
   install.packages("devtools", dependencies = TRUE)}
@@ -44,14 +55,14 @@ library(mixedpower)
 model <- m1_all_blocks # use first-two-block model for power simulation
 heatmap_filtered$participant_id_num <- as.numeric(factor(heatmap_filtered$participant_id))
 data <- heatmap_filtered # data used to fit the model
-fixed_effects <- c("label_condition_c","lightness_mapping_c","attention_c")
+fixed_effects <- c("label_condition_c","lightness_mapping_c","attention_c", "block_c")
 simvar <- "participant_id_num" # which random effect do we want to vary in the simulation?
 
 
 # SIMULATION PARAMETERS
-steps <- c(20, 40, 60, 80, 100) # which sample sizes do we want to look at?
+steps <- c(20, 40, 60, 80, 100, 120) # which sample sizes do we want to look at?
 critical_value <- 1.96 # which t/z value do we want to use to test for significance?
-n_sim <- 50 # how many single simulations should be used to estimate power?
+n_sim <- 100 # how many single simulations should be used to estimate power?
 
 
 power_analysis_results <- mixedpower(model = model, data = data,
@@ -62,4 +73,4 @@ power_analysis_results <- mixedpower(model = model, data = data,
 power_analysis_results
 
 # multiplotPower(power_analysis_results)
-multiplotPower(power_analysis_results, ppi = 300, filename = "../output/power_analysis3_acc_woBlock_woExclusions.png")
+multiplotPower(power_analysis_results, ppi = 300, filename = "../output/power_analysis_acc_tier000_wBlock_fullRandom_n1000.png")

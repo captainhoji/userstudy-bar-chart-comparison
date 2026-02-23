@@ -67,7 +67,7 @@ function ensureLayout(attention) {
   const instructionEl = document.createElement('p');
   instructionEl.id = 'controls-instruction';
   instructionEl.className = 'colormap-instruction';
-  instructionEl.textContent = 'Which side shows greater values? Respond with the left or right arrow key.';
+  instructionEl.innerHTML = 'Are there more animals early (left) or late (right) in the day?<br>Respond with the left or right arrow key.';
 
   const feedbackEl = document.createElement('div');
   feedbackEl.id = 'colormap-feedback';
@@ -155,17 +155,15 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
     if (!heatmapHeight || !rowEl) return;
 
     // Keep legend and labels at a fixed proportion of the rendered heatmap size.
-    const legendHeight = Math.round(heatmapHeight * 0.4);
+    const legendHeight = Math.round(heatmapHeight * 0.65);
     // Keep labels readable but prevent oversized text on large displays.
-    const labelSize = Math.round(legendHeight * 0.1);
+    const labelSize = Math.round(legendHeight * 0.09);
     const gapSize = Math.max(4, Math.round(labelSize * 0.4));
-    const padY = Math.max(2, Math.round(legendHeight * 0.05));
     const padX = Math.max(4, Math.round(legendHeight * 0.08));
 
     rowEl.style.setProperty('--legend-height', `${legendHeight}px`);
     rowEl.style.setProperty('--legend-label-size', `${labelSize}px`);
     rowEl.style.setProperty('--legend-gap', `${gapSize}px`);
-    rowEl.style.setProperty('--legend-pad-y', `${padY}px`);
     rowEl.style.setProperty('--legend-pad-x', `${padX}px`);
   }
 

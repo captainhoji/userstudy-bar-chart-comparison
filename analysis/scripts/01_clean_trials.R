@@ -6,7 +6,7 @@ if (!file.exists(cfg$raw_trial_heatmap)) {
 }
 
 last2_accuracy_threshold <- 26 / 40
-ishihara_accuracy_threshold <- 9 / 11
+ishihara_accuracy_threshold <- 8 / 11
 
 heatmap <- readr::read_csv(cfg$raw_trial_heatmap, show_col_types = FALSE) %>%
   mutate(
@@ -218,8 +218,9 @@ if (!("d_prime_last2" %in% names(phone_sdt_last2))) {
     )
 }
 
-# Tier 1 participant exclusion:
-# low heatmap accuracy OR (dual and d' CI includes 0).
+# Tier 0 participant exclusion:
+# Ishihara OR (dual and d' CI includes 0), but NOT heatmap accuracy.
+# Tier 1 then adds heatmap-accuracy exclusion on top of tier 0.
 heatmap_last2_summary <- heatmap %>%
   filter(!is.na(block_num), block_num %in% c(3, 4)) %>%
   group_by(participant_id) %>%
@@ -236,12 +237,14 @@ participant_summary <- heatmap %>%
   left_join(phone_sdt, by = "participant_id") %>%
   mutate(
     tier1_exclude_low_heatmap_accuracy = heatmap_accuracy < cfg$rt_min_accuracy,
-    tier1_exclude_low_phone_sdt = dplyr::case_when(
+    tier0_exclude_low_phone_sdt = dplyr::case_when(
       attention == "dual" ~ !dplyr::coalesce(d_prime_ci_excludes_zero, FALSE),
       TRUE ~ FALSE
     ),
-    tier1_exclude_low_ishihara = dplyr::coalesce(ishihara_overall_accuracy < ishihara_accuracy_threshold, FALSE),
-    exclude_tier1 = tier1_exclude_low_heatmap_accuracy | tier1_exclude_low_phone_sdt | tier1_exclude_low_ishihara
+    tier0_exclude_low_ishihara = dplyr::coalesce(ishihara_overall_accuracy <= ishihara_accuracy_threshold, FALSE),
+    exclude_tier0 = tier0_exclude_low_phone_sdt | tier0_exclude_low_ishihara,
+    exclude_tier_000 = tier1_exclude_low_heatmap_accuracy | tier0_exclude_low_phone_sdt,
+    exclude_tier1 = exclude_tier0 | tier1_exclude_low_heatmap_accuracy
   ) %>%
   left_join(heatmap_last2_summary, by = "participant_id") %>%
   left_join(phone_sdt_last2, by = "participant_id") %>%
@@ -253,7 +256,8 @@ participant_summary <- heatmap %>%
       attention == "dual" ~ !dplyr::coalesce(d_prime_ci_excludes_zero, FALSE),
       TRUE ~ FALSE
     ),
-    exclude_last2_criteria = tier_last2_exclude_low_heatmap_accuracy | tier_last2_exclude_low_phone_sdt
+    tier_last2_exclude_low_ishihara = dplyr::coalesce(ishihara_overall_accuracy <= ishihara_accuracy_threshold, FALSE),
+    exclude_last2_criteria = tier_last2_exclude_low_heatmap_accuracy | tier_last2_exclude_low_phone_sdt | tier_last2_exclude_low_ishihara
   )
 
 # Tier 2 participant RT outlier exclusion after tier1 filtering.
@@ -323,11 +327,14 @@ heatmap <- heatmap %>%
         d_prime_last2_ci_excludes_zero,
         phone_last2_available,
         tier1_exclude_low_heatmap_accuracy,
-        tier1_exclude_low_phone_sdt,
-        tier1_exclude_low_ishihara,
+        tier0_exclude_low_phone_sdt,
+        tier0_exclude_low_ishihara,
+        exclude_tier0,
+        exclude_tier_000,
         exclude_tier1,
         tier_last2_exclude_low_heatmap_accuracy,
         tier_last2_exclude_low_phone_sdt,
+        tier_last2_exclude_low_ishihara,
         exclude_last2_criteria,
         tier2_participant_rt_outlier,
         exclude_tier2
@@ -342,21 +349,43 @@ heatmap <- heatmap %>%
 
 exclusion_summary <- participant_summary %>%
   mutate(
+    excluded_tier0 = exclude_tier0,
+    exclusion_reason_tier0 = stringr::str_trim(
+      paste(
+        ifelse(tier0_exclude_low_phone_sdt, "phone_dprime_ci_includes_0", ""),
+        ifelse(tier0_exclude_low_ishihara, "ishihara_below_9_of_11", "")
+      )
+    ),
+    exclusion_reason_tier0 = stringr::str_replace_all(exclusion_reason_tier0, "\\s+", ";"),
+    exclusion_reason_tier0 = dplyr::if_else(exclusion_reason_tier0 == "", "included", exclusion_reason_tier0),
+    excluded_tier_000 = exclude_tier_000,
+    exclusion_reason_tier_000 = stringr::str_trim(
+      paste(
+        ifelse(tier1_exclude_low_heatmap_accuracy, "low_heatmap_accuracy", ""),
+        ifelse(tier0_exclude_low_phone_sdt, "phone_dprime_ci_includes_0", "")
+      )
+    ),
+    exclusion_reason_tier_000 = stringr::str_replace_all(exclusion_reason_tier_000, "\\s+", ";"),
+    exclusion_reason_tier_000 = dplyr::if_else(exclusion_reason_tier_000 == "", "included", exclusion_reason_tier_000),
     excluded = exclude_tier1,
     exclusion_reason = stringr::str_trim(
       paste(
         ifelse(tier1_exclude_low_heatmap_accuracy, "low_heatmap_accuracy", ""),
-        ifelse(tier1_exclude_low_phone_sdt, "phone_dprime_ci_includes_0", ""),
-        ifelse(tier1_exclude_low_ishihara, "ishihara_below_9_of_11", "")
+        ifelse(tier0_exclude_low_phone_sdt, "phone_dprime_ci_includes_0", ""),
+        ifelse(tier0_exclude_low_ishihara, "ishihara_below_9_of_11", "")
       )
     ),
     exclusion_reason = stringr::str_replace_all(exclusion_reason, "\\s+", ";"),
     exclusion_reason = dplyr::if_else(exclusion_reason == "", "included", exclusion_reason),
     excluded_last2_criteria = exclude_last2_criteria,
     exclusion_reason_last2_criteria = dplyr::case_when(
+      tier_last2_exclude_low_heatmap_accuracy & tier_last2_exclude_low_phone_sdt & tier_last2_exclude_low_ishihara ~ "low_heatmap_accuracy_block34;phone_dprime_ci_includes_0_overall;ishihara_below_9_of_11",
       tier_last2_exclude_low_heatmap_accuracy & tier_last2_exclude_low_phone_sdt ~ "low_heatmap_accuracy_block34;phone_dprime_ci_includes_0_overall",
+      tier_last2_exclude_low_heatmap_accuracy & tier_last2_exclude_low_ishihara ~ "low_heatmap_accuracy_block34;ishihara_below_9_of_11",
+      tier_last2_exclude_low_phone_sdt & tier_last2_exclude_low_ishihara ~ "phone_dprime_ci_includes_0_overall;ishihara_below_9_of_11",
       tier_last2_exclude_low_heatmap_accuracy ~ "low_heatmap_accuracy_block34",
       tier_last2_exclude_low_phone_sdt ~ "phone_dprime_ci_includes_0_overall",
+      tier_last2_exclude_low_ishihara ~ "ishihara_below_9_of_11",
       TRUE ~ "included"
     )
   )

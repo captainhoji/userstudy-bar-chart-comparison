@@ -7,8 +7,8 @@ const LEGEND_IMAGES = {
 };
 
 const LABEL_CONDITIONS = [
-  { id: 'greater-up', top: 'greater', bottom: 'fewer' },
-  { id: 'fewer-up', top: 'fewer', bottom: 'greater' }
+  { id: 'greater-up', top: 'Greater', bottom: 'Fewer' },
+  { id: 'fewer-up', top: 'Fewer', bottom: 'Greater' }
 ];
 
 function buildHeatmapList(startIndex = 0, countPerSide = HEATMAP_COUNT_PER_SIDE) {
@@ -17,12 +17,12 @@ function buildHeatmapList(startIndex = 0, countPerSide = HEATMAP_COUNT_PER_SIDE)
     heatmaps.push({
       id: `left-${i}`,
       condition: 'left-dark',
-      src: `/static/stimuli/${HEATMAP_STYLE}_left_${i}.png`
+      src: `/static/stimuli/${HEATMAP_STYLE}_left_${i}_cropped.png`
     });
     heatmaps.push({
       id: `right-${i}`,
       condition: 'right-dark',
-      src: `/static/stimuli/${HEATMAP_STYLE}_right_${i}.png`
+      src: `/static/stimuli/${HEATMAP_STYLE}_right_${i}_cropped.png`
     });
   }
   return heatmaps;

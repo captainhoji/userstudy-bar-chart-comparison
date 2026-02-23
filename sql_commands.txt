@@ -34,7 +34,7 @@ sudo docker exec -it userstudy-container cat /var/log/apache2/error.log
 sudo docker exec -it userstudy-container tail -f /var/log/apache2/error.log
 
 ssh -i ../captainhoji.pem captainhoji@128.203.201.216
-scp -i ../captainhoji.pem -r static templates captainhoji@128.203.201.216:~/test
+scp -i ../captainhoji.pem -r static templates userStudy.py captainhoji@128.203.201.216:~/test
 
 sudo docker stop userstudy-container
 sudo docker rm userstudy-container

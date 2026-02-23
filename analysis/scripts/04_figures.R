@@ -9,52 +9,13 @@ heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
 eligible_ids <- heatmap %>%
-  filter(!exclude_tier3) %>%
+  filter(!exclude_tier_000) %>%
   distinct(participant_id) %>%
   pull(participant_id)
 
 heatmap_filtered <- heatmap %>%
-  filter(participant_id %in% eligible_ids)
-
-acc_by_pid <- heatmap_filtered %>%
-  group_by(participant_id, attention) %>%
-  summarise(acc = mean(correct, na.rm = TRUE), .groups = "drop")
-
-rt_by_pid <- heatmap_filtered %>%
-  group_by(participant_id, attention) %>%
-  summarise(rt = mean(response_time, na.rm = TRUE), .groups = "drop")
-
-p_acc <- ggplot(acc_by_pid, aes(x = attention, y = acc, fill = attention)) +
-  geom_boxplot(width = 0.55, alpha = 0.8, outlier.alpha = 0.35) +
-  labs(x = "Attention condition", y = "Accuracy", title = "Heatmap Accuracy by Attention") +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
-
-p_rt <- ggplot(rt_by_pid, aes(x = attention, y = rt, fill = attention)) +
-  geom_boxplot(width = 0.55, alpha = 0.8, outlier.alpha = 0.35) +
-  labs(x = "Attention condition", y = "Response time (ms)", title = "Heatmap RT by Attention") +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
-
-# Correct-trial RT figure split into 4 cells:
-# single/dual x dark-more/light-more
-rt_correct_cells <- heatmap_filtered %>%
-  filter(correct == 1, !is.na(lightness_mapping)) %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    cell = interaction(attention, lightness_mapping, sep = " | ", lex.order = TRUE)
-  )
-
-p_rt_correct_cells <- ggplot(rt_correct_cells, aes(x = cell, y = response_time, fill = lightness_mapping)) +
-  geom_boxplot(width = 0.6, alpha = 0.85, outlier.alpha = 0.25) +
-  labs(
-    x = "Condition",
-    y = "Response time (ms)",
-    title = "Correct-Trial RT by Attention and Lightness Mapping"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  filter(participant_id %in% eligible_ids) %>%
+  filter((block_num >= 3 & attention=="dual") | (block_num <= 2 & attention=="single"))
 
 # Mean-of-means RT with SE bars:
 # 1) compute participant mean RT per condition
@@ -117,11 +78,79 @@ p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_acc, fill = lightne
     width = 0.18,
     linewidth = 0.7
   ) +
-  coord_cartesian(ylim = c(0.8, 1.0)) +
+  coord_cartesian(ylim = c(0.5, 1.0)) +
   labs(
     x = "Condition",
     y = "Mean of participant mean accuracy",
     title = "Accuracy Mean of Means with SE"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
+
+# Mean-of-means RT with SE bars by attention x label condition.
+rt_mom_label <- heatmap_filtered %>%
+  filter(correct == 1, !is.na(label_condition)) %>%
+  group_by(participant_id, attention, label_condition) %>%
+  summarise(pid_mean_rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
+  group_by(attention, label_condition) %>%
+  summarise(
+    mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
+    se = sd(pid_mean_rt, na.rm = TRUE) / sqrt(n()),
+    n_participants = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up")),
+    cell = interaction(attention, label_condition, sep = " | ", lex.order = TRUE)
+  )
+
+p_rt_mom_label <- ggplot(rt_mom_label, aes(x = cell, y = mean_of_means_rt, fill = label_condition)) +
+  geom_col(width = 0.65, alpha = 0.9) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
+    width = 0.18,
+    linewidth = 0.7
+  ) +
+  coord_cartesian(ylim = c(1250, 2500)) +
+  labs(
+    x = "Condition",
+    y = "Mean of participant mean RT (ms)",
+    title = "Correct-Trial RT Mean of Means by Attention and Label Condition"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
+
+# Mean-of-means accuracy with SE bars by attention x label condition.
+acc_mom_label <- heatmap_filtered %>%
+  filter(!is.na(label_condition)) %>%
+  group_by(participant_id, attention, label_condition) %>%
+  summarise(pid_mean_acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
+  group_by(attention, label_condition) %>%
+  summarise(
+    mean_of_means_acc = mean(pid_mean_acc, na.rm = TRUE),
+    se = sd(pid_mean_acc, na.rm = TRUE) / sqrt(n()),
+    n_participants = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up")),
+    cell = interaction(attention, label_condition, sep = " | ", lex.order = TRUE)
+  )
+
+p_acc_mom_label <- ggplot(acc_mom_label, aes(x = cell, y = mean_of_means_acc, fill = label_condition)) +
+  geom_col(width = 0.65, alpha = 0.9) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
+    width = 0.18,
+    linewidth = 0.7
+  ) +
+  coord_cartesian(ylim = c(0.5, 1.0)) +
+  labs(
+    x = "Condition",
+    y = "Mean of participant mean accuracy",
+    title = "Accuracy Mean of Means by Attention and Label Condition"
   ) +
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
@@ -190,7 +219,7 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
   ) +
-  coord_cartesian(ylim = c(0.8, 1.0)) +
+  coord_cartesian(ylim = c(0.5, 1.0)) +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -254,6 +283,33 @@ p_acc_by_participant <- ggplot(
   ) +
   theme_minimal(base_size = 12)
 
+acc_by_participant_lines <- heatmap %>%
+  filter(participant_id %in% eligible_ids) %>%
+  group_by(participant_id, attention, label_condition) %>%
+  summarise(acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+  )
+
+p_acc_by_participant_label <- ggplot(
+  acc_by_participant_lines,
+  aes(
+    x = label_condition,
+    y = acc,
+    color = attention,
+    group = interaction(participant_id, attention)
+  )
+) +
+  geom_line(linewidth = 0.8, alpha = 0.45) +
+  geom_point(size = 1.8, alpha = 0.45) +
+  labs(
+    x = "Lightness mapping",
+    y = "Mean accuracy",
+    title = "Participant Accuracy Lines by Attention and Label Condition"
+  ) +
+  theme_minimal(base_size = 12)
+
 # Block-wise figures:
 # block 1: stimuli_number 0-19, block 2: 20-39, block 3: 40-59, block 4: 60-79
 block_data <- heatmap_filtered %>%
@@ -296,15 +352,15 @@ p_acc_block <- ggplot(acc_block, aes(x = block, y = mean_acc, color = condition,
   ) +
   theme_minimal(base_size = 13)
 
-ggsave(cfg$out_fig_accuracy, p_acc, width = 7, height = 5, dpi = 300)
-ggsave(cfg$out_fig_rt, p_rt, width = 7, height = 5, dpi = 300)
-ggsave(cfg$out_fig_rt_correct_by_attention_mapping, p_rt_correct_cells, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_rt_mean_of_means_se, p_rt_mom, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dpi = 300)
+ggsave(cfg$out_fig_rt_mean_of_means_se_label, p_rt_mom_label, width = 10, height = 5.5, dpi = 300)
+ggsave(cfg$out_fig_acc_mean_of_means_se_label, p_acc_mom_label, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_rt_attention_lightness_label, p_rt_threeway, width = 12, height = 6, dpi = 300)
 ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 12, height = 6, dpi = 300)
 ggsave(cfg$out_fig_rt_by_participant_attention_mapping, p_rt_by_participant, width = 14, height = 8, dpi = 300)
 ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, width = 14, height = 8, dpi = 300)
+ggsave(cfg$out_fig_acc_by_participant_label, p_acc_by_participant_label, width = 14, height = 8, dpi = 300)
 ggsave(cfg$out_fig_rt_by_block_attention_mapping, p_rt_block, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, height = 5.5, dpi = 300)
 

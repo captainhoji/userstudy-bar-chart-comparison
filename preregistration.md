@@ -2,93 +2,187 @@
 This metadata applies only to the registration you are creating, and will not be applied to your project.
 
 ## Title
-Heatmap Legend Interpretation Under Single vs Dual-Task Attention
+colormap Legend Interpretation Under Single vs Dual-Task task
 
 ## Description
-This study examines whether the dark-is-more bias reported in prior single-task heatmap studies is amplified under divided attention. Schloss, Gramazio, Silverman, Parker, & Wang (2018) found a bias favoring darker-as-more mappings in a single-task setting; we extend this by testing a dual-task scenario that better reflects real-world attention demands, where people rarely focus on a single task for extended periods. Participants view heatmaps depicting animal sightings across time of day (x-axis: early to late) and animal type (y-axis). Each heatmap is paired with a legend whose mapping (dark=greater vs dark=fewer) and label order (greater on top vs bottom) vary, and these are coded into a lightness mapping factor (dark-more vs light-more). On each trial, participants decide whether there are more animals early (left) or late (right) using the left/right arrow keys. In a dual-task condition, a simulated phone chat appears concurrently and participants must press the spacebar to “like” pet-related messages while withholding responses to non-pet messages. The primary outcome is response time on correct heatmap trials; accuracy is exploratory. Secondary outcomes include accuracy on the phone task (for dual-task participants).
+This study will examine the dark-is-more bias reported in prior single-task colormap studies under divided task. Schloss et al. (2018) found a bias favoring darker-as-more mappings in a single-task setting; we extend this by testing a dual-task scenario that better reflects real-world task demands, where people rarely focus on a single task for extended periods. Participants will judge whether a colormap shows greater values on the left or right side, while legend semantics vary across trials. In dual task, participants will simultaneously monitor a phone chat and respond to messages. We expect the dark-is-more bias to be amplified in the dual-task condition, compared to the single-task condition.
+
+Schloss, K. B., Gramazio, C. C., Silverman, A. T., Parker, M. L., & Wang, A. S. (2018). Mapping color to meaning in colormap data visualizations. IEEE transactions on visualization and computer graphics, 25(1), 810-819.
 
 # Overview
-
 ## Hypotheses
-H1. Within each attention condition, response times (correct trials only) will be faster in the dark-more condition than in the light-more condition.
 
-H2. The dark-more vs light-more response-time difference will be larger in the dual-task condition than in the single-task condition (lightness mapping × attention interaction).
+The following three hypotheses are based on the results found in Schloss et al. (2019)'s study.
+
+H1-rt (Main effect of lightness mapping on response time):
+Response time will be predicted by lightness mapping such that response time will be faster under the dark-more mapping than under the light-more mapping.
+
+H2-rt (Main effect of label on response time):
+Response time will be predicted by label such that response time will be faster under the high-more mapping than under the low-more mapping.
+
+H3-rt (Interaction between lightness mapping and label on response time):
+The effect of lightness mapping on response time will be moderated by label, such that the response time advantage of the dark-more over the light-more mapping will be larger under high-more mapping than under low-more mapping.
+
+The following three hypotheses are the same as the above hypotheses, but for accuracy.
+
+H1-acc (Main effect of lightness mapping on accuracy):
+Accuracy will be predicted by lightness mapping such that accuracy will be higher under the dark-more mapping than under the light-more mapping.
+
+H2-acc (Main effect of label on accuracy):
+Accuracy will be predicted by label such that accuracy will be higher under the high-more mapping than under the low-more mapping.
+
+H3-acc (Interaction between lightness mapping and label on accuracy):
+The effect of lightness mapping on accuracy will be moderated by label, such that the accuracy advantage of the dark-more over the light-more mapping will be larger under high-more mapping than under low-more mapping.
+
+The following three hypotheses are about the effect of task condition.
+
+H4-acc (Main effect of task on accuracy):
+Accuracy will be predicted by task such that accuracy will be higher under single task than in dual task.
+
+H4-rt (Main effect of task on response time):
+Response time will be predicted by task such that response time will be faster under single task than in dual task.
+
+H5 (Interaction between task and lightness mapping):
+The effect of lightness mapping on accuracy will be moderated by task condition, such that the accuracy advantage of the dark-more over the light-more mapping will be larger under dual task than under single task.
+
+H6 (Interaction between task and label):
+The effect of label on accuracy will be moderated by task condition, such that the accuracy advantage of the high-more over the low-more mapping will be larger under dual task than under single task.
+
 
 # Research Design
 
 ## Study design
-The study is an online, mixed design. The primary heatmap task is within-subjects: each participant sees heatmaps crossed with legend mapping (dark=greater vs dark=fewer) and legend label order (greater on top vs bottom). Heatmaps themselves vary in which side is darker (left-dark vs right-dark), which determines the correct response given the legend. Trials are self-paced (stimulus remains until response) with a 500 ms blank screen preceding each trial. Participants respond with the left/right arrow keys.
+This study will use a mixed factorial design.
 
-Participants complete 20 practice trials followed by 80 real trials. Practice trials use a separate set of heatmaps and random legend/label combinations; real trials are fully crossed across legend mapping and label order for each heatmap.
+Between-subjects factor (random assignment)
+1. Task (single or dual).
 
-Attention condition is between-subjects: in the dual-task condition, a simulated phone chat appears and participants press the spacebar to “like” pet-related messages while withholding responses to non-pet messages; in the single-task condition, only the heatmap task is shown.
+Within-subject factors:
+1. Lightness mapping (dark-more or light-more).
+2. Label (greater-up or fewer-up)
+
+------------------------------------
+
+Experimental Procedure:
+
+1. Instructions: Participants will read instructions for the task and will be shown example stimuli. 
+2. Practice trials: Participants will complete 20 practice trials designed to introduce the task.
+3. Experiment trials: Participants will complete the 80 experiment trials. They are given a short break every 20 trials.
+4. Color vision test: Participants will complete a color vision test.
+
+In each trial, participants in the single task condition will perform a colormap task.
+Participants in the dual task condition will perform both colormap task and phone task simultaneously.
+
+Colormap task:
+A colormap and its corresponding legend will be displayed. We will use a subset of the stimuli used in the experiment of Schloss et al., 2018. We will only use colormaps with a blue-hue color scale and with a white background.  
+The legend will be a vertical color gradient and will be positioned next to the colormap. The legend will be different based on the lightness mapping and label conditions. 
+In the dark-more lightness mapping condition, the darker colors will map to greater values. In the light-more lightness mapping condition, the lighter colors will map to greater values.
+In the greater-up label condition, the label "greater" is at the top of the legend. In the fewer-up label condition, the label "fewer" is at the top of the legend.
+Participants will be asked to look at the colormap and its legend to indicate which side (left or right) of the colormap represents greater values. They will respond in left or right arrow keys.
+On incorrect response, a red "Incorrect" message is shown for 1000 ms before proceeding to the next trial.
+
+Phone task (dual task condition only):
+A phone display will run concurrently to the left of the colormap display. A stream of messages will appear on the phone screen. The messages are meant to simulate those that appear on a chat room of a group of friends. A message will be either a message that is related or unrelated to a pet (dog, cat, parrot, or goldfish). A message will be displayed for 3 seconds and disappear, with the next message showing up arbitrarily between 0.5 and 2 seconds.
+Participants will be asked to look at the phone and "like" pet-related messages by pressing spacebar. Each phone response will be scored into hit, miss, false alarm, or correct rejection.
+If participant "likes" a pet-related message, the background of the message will turn green.
+If participant "likes" a pet-unrelated message, the background of the message will turn red.
+If participant does not "like" a pet-related message in time, an angry emoji will be displayed briefly.
+
+Color vision test:
+Participants will perform an Ishihara color-vision test (11 items) and will answer a question about their color vision.
+
+Reference:
+Schloss, K. B., Gramazio, C. C., Silverman, A. T., Parker, M. L., & Wang, A. S. (2018). Mapping color to meaning in colormap data visualizations. IEEE transactions on visualization and computer graphics, 25(1), 810-819.
 
 ## Randomization (Optional)
-Within each participant, trial order is randomized by shuffling the full list of heatmap trials. Practice trials are sampled from a separate heatmap set with random legend and label assignments. The attention condition (single vs dual) is set by the study link parameter; if participants are randomly assigned to attention conditions, that randomization is handled by the recruitment platform or external assignment procedure.
+We will use 20 distinct colormaps. 10 will be darker on the left side and the other 10 will be darker on the right side.
+Each of the 20 colormap will be used to create 4 stimuli by altering the legend, based on lightness mapping and label conditions.
+This will result in a stimuli pool of 80 stimuli. The order of 80 stimuli are shuffled per participant.
+Practice trials will use colormaps not in the stimuli pool.
+
+200 pet-unrelated phone messages and 80 pet-related messages will be generated before the experiment.
+The pet-unrelated phone messages will be divided into conversations. Each conversation will contain 10 messages.
+The messages within a conversation will share a common theme, so that the dialogue can flow naturally.
+For each participant, the order of the conversations will be randomized, while the order of messages within each conversation will remain unchanged. Messages will then be displayed sequentially. In 40% of trials, a message will instead be randomly sampled from the pool of 80 pet-related messages and presented to the participant. If all 200 pet-unrelated messages are displayed, the sequence will restart from the beginning.
+The number of messages viewed by each participant will vary depending on how quickly they complete the colormap task.
+
 
 # Sampling
 
 ## Data collection procedures
-Participants are recruited online (e.g., Prolific). Eligibility criteria include age 18+, fluent English, and no blindness or low vision conditions. Participants must use a desktop or laptop with a standard browser (Chrome/Firefox/Safari/Edge), with JavaScript and cookies enabled, and complete the task in fullscreen. The study flow is: consent and verification, Prolific ID entry, and the heatmap task (with practice and real trials). Participation is expected to take approximately 20 minutes.
 
 ## Sample size
-Each participant completes 20 practice trials and 80 real trials. Sample size in terms of number of participants and expected counts per attention condition will be determined prior to data collection.
+Our target sample size is 80 participants.
 
 ## Sample size rationale (Optional)
+We chose the sample size of 80 participants based on a power analysis using data from a pilot study, which used the same design as we will use here. We used the R mixedpower library to conduct a power analysis. The power analysis suggested that 40 participants per task condition are needed to obtain .80 power to detect the interaction between lightness mapping and task.
 
 ## Starting and stopping rules
+We will initially post the study on Prolific with 80 spots (40 spots per task condition) . After excluding data based on the exclusion criteria, if there are task conditions that have less than 40 participants, we will keep posting 3 additional spots for those conditions until all the task conditions have at least 40 participants.
 
 # Variables
 
 ## Manipulated variables
-Heatmap task (within-subjects):
-- Lightness mapping: dark-more (darker means greater) vs light-more (lighter means greater). This factor is derived from the legend mapping and label order on each trial.
-- Heatmap condition: left-dark vs right-dark (stimulus property determining the correct answer).
-Note: Lightness mapping is not orthogonal to heatmap condition because correctness depends on the combination of heatmap condition and legend mapping. The lightness mapping factor is derived from legend/label configuration and is interpreted in the context of the displayed heatmap.
-
-Attention condition (between-subjects):
-- Single-task (heatmap only) vs dual-task (heatmap + phone chat).
+1. Task (single and dual)
+   - Single: Participant only performs the colormap task
+   - Dual: Participant performs both colormap task and phone task simultaneously
+2. Lightness mapping (dark-more and light-more)
+   - Dark-more: Darker colors map to greater values
+   - Light-more: Lighter colors map to greater values
+3. Label: (high-more and low-more)
+   - High-more: “Greater” appears at the top of the legend
+   - Low-more: “Fewer” appears at the top of the legend
 
 ## Measured variables
-Primary heatmap-task measures (trial-level):
-- Response (left/right), correctness, response time (ms), trial number, time stamp.
-- Stimulus identifiers and conditions: heatmap ID, heatmap condition (left-dark/right-dark), legend mapping, label order, attention condition.
-Derived variable:
-- Lightness mapping (dark-more vs light-more), computed from the legend and label conditions for each trial.
+Colormap task:
+1. Accuracy: For each trial, the correctness of the participant's response will be measured.
+2. Response Time: For each trial, the time taken between the display of the stimulus and the participant's response will be measured. 
+3. Block Number: For each participant, trials will be divided into four sequential blocks of 20 based on their order of presentation. Each trial will be labeled as belonging to Block 1, 2, 3, or 4.
 
-Phone-task measures (dual-task only):
-- Message-level responses are used to compute accuracy; summary accuracy is recorded at least for practice.
+Phone task (only in dual task condition):
+1. Hit: For each participant, the number of pet-related messages they "liked" during the whole experiment will be measured.
+2. Miss: For each participant, the number of pet-related messages they did not "like" during the whole experiment will be measured.
+3. False Alarm: For each participant, the number of pet-unrelated messages they "liked" during the whole experiment will be measured.
+4. Correct Rejection: For each participant, the number of pet-unrelated messages they did not "like" during the whole experiment will be measured.
 
 ## Indices
-Accuracy will be computed as the proportion of correct responses (exploratory). Response time will be summarized as the mean (and/or median) response time per condition using correct trials only. Phone-task accuracy will be computed as correct likes and correct rejections divided by total messages (dual-task only).
+- colormap accuracy: mean of `correct`.
+- colormap RT: mean `duration` (or `response_time` fallback), primarily on correct trials.
+- Phone sensitivity: d' with 95% CI using Gourevitch & Galanter-style variance approximation.
 
 # Analysis Plan
 
 ## Statistical models
-Primary analysis will use response times (RTs) from correct trials only. We will fit a linear mixed-effects model at the trial level with fixed effects for lightness mapping (dark-more vs light-more), attention condition (single vs dual), and their interaction, and random intercepts for participant. We will also include a random slope for lightness mapping by participant if the model converges. 
+To test the hypotheses regarding response times (RT), we will fit a Linear Mixed Effects Regression (LMER) model. We will predict RT of a trial from fixed effects of tassk (between-subject) * lightness mapping (within-subject) * label (within-subject). We will include random by-subject slopes and intercepts for each within-subject fixed effect.
 
-H1 test: the fixed effect of lightness mapping within each attention condition (planned contrast of dark-more vs light-more). 
-
-H2 test: the lightness mapping × attention interaction term (dark-more vs light-more gap larger in dual-task).
+To test the hypotheses regarding accuracy, we will fit a Generalized Linear Mixed Effects Regression (GLMER) model. We will predict correctness of a trial from fixed effects of task (between-subject) * lightness mapping (within-subject) * label (within-subject). We will include random by-subject slopes and intercepts for each within-subject fixed effect.
 
 ## Transformations
-Categorical variables will be coded as factors (lightness mapping: dark-more vs light-more; attention: single vs dual). RT analyses will be run on correct trials only. No other transformations are planned.
+Categorical variables (task, lightness mapping, and label) will be contrast-coded (−0.5, 0.5). 
+For each trial, accuracy will be recorded as 1 (correct) or 0 (incorrect). An accurate response is when the participant correctly indicates the side (left/right) of the colormap that represents greater values.
 
 ## Inference criteria
-Primary inferences will be based on two-tailed tests with α = 0.05. The key tests are the within-condition dark-more vs light-more contrasts and the lightness mapping × attention interaction.
+We will use a  p&lt;.05 criterion for determining whether effects from the GLMER models are significant.
 
 ## Data inclusion and exclusion
-Participants with fewer than 50 correct responses out of 80 trials will be excluded, following a binomial test threshold with α = 0.05. RT analyses will include only correct trials. No additional exclusions are planned.
+1. Exclude participants with low colormap task accuracy
+Participants with fewer than 50 correct responses out of 80 trials will be excluded, following a binomial test threshold with α = 0.05. 
+
+2. Exclude participants with low phone task sensitivity (dual task condition only)
+Participants whose approximated 95% confidence interval of sensitivity (d') includes 0 will be excluded.
 
 ## Missing data
-Analyses will use all available correct trials.
+Participants will be excluded from analysis if they do not complete the entire experiment. 
+Models will be conducted on all available data and otherwise ignore whether data is missing.
 
 ## Other planned analysis (Optional)
-Accuracy will be analyzed as an exploratory outcome only (not part of the primary hypothesis).
+We will conduct additional exploratory analyses to examine the role of label placement and practice effects. First, using the same GLMER model for the main analysis, we will test for a main effect of label and an interaction between attention and label. We predict that accuracy will be higher in the greater-up condition than in the fewer-up condition, and that this advantage will be larger under dual attention than under single attention.
+
+Next, we will extend the GLMER model to include block number to examine order effects. Block number will be added as a fixed effect, along with random by-subject slopes and intercepts. Block number will be coded using centered linear contrasts (−1.5, −0.5, 0.5, 1.5). We expect that the accuracy will improve over each block.
+
+Finally, we will repeat all the main and exploratory analyses using response time for correct trials as the dependent variable. These models will be fit using linear mixed-effects regression (LMER). 
 
 # Other
 
 ## Context and additional information (Optional)
-The heatmap stimuli depict spatial patterns with one side (left or right) being darker; correctness is determined by whether darker colors map to “greater” or “fewer” values given the legend on that trial. Participants receive error feedback via a brief tone and periodic accuracy feedback every 20 trials.
-
-   
+Participants are told they are viewing animal-sighting colormaps from different locations on a fictional planet. Legends change across trials, so participants must read the legend each trial. In dual task, participants simultaneously monitor chat messages and like pet-related messages. Practice performance feedback is shown before real trials.
