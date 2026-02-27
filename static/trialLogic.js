@@ -8,6 +8,8 @@ let config = null;
 let trialData = null;
 let onNext = null;
 let isStimulusDisplayed = false;
+let constantExposureTimerId = null;
+let trialStartTs = null;
 
 export function configureTrialState(state, nextCallback) {
   config = state;
@@ -24,9 +26,12 @@ export function loadTrial() {
   } else {
     config.currentAttention = config.attention;
   }
+  const itiMs = config.exposureMode === 'constant-time'
+    ? randomInterTrialMs(config.interTrialMinMs || 500, config.interTrialMaxMs || 2000)
+    : 500;
 
   displayBlankScreen({
-    duration: 500,
+    duration: itiMs,
     attention: config.currentAttention || config.attention,
     onDone: () => {
       if (typeof config.onPhoneScreenReady === 'function') config.onPhoneScreenReady();
@@ -37,6 +42,17 @@ export function loadTrial() {
       });
       addKeyHandlers(null, handleArrowKeyPress);
       isStimulusDisplayed = true;
+
+      if (config.exposureMode === 'constant-time') {
+        trialStartTs = performance.now();
+        if (constantExposureTimerId) window.clearTimeout(constantExposureTimerId);
+        constantExposureTimerId = window.setTimeout(() => {
+          constantExposureTimerId = null;
+          if (!isStimulusDisplayed) return;
+          isStimulusDisplayed = false;
+          handleTimeoutNoResponse();
+        }, config.constantExposureMs || 1750);
+      }
     }
   });
 }
@@ -54,6 +70,34 @@ export function handleArrowKeyPress(event) {
 }
 
 async function handleResponse(response) {
+  if (config.exposureMode === 'constant-time') {
+    if (!isStimulusDisplayed) return;
+    isStimulusDisplayed = false;
+    if (constantExposureTimerId) {
+      window.clearTimeout(constantExposureTimerId);
+      constantExposureTimerId = null;
+    }
+    const duration = Math.max(0, Math.round((performance.now() - (trialStartTs || performance.now()))));
+    const darkerSide = trialData.heatmapCondition === 'left-dark' ? 'left' : 'right';
+    const correctSide = trialData.greaterIsDark ? darkerSide : (darkerSide === 'left' ? 'right' : 'left');
+    const isCorrect = response === correctSide;
+    console.log(`trial ${config.trialCounter + 1} correctness: ${isCorrect ? 'correct' : 'incorrect'} (constant-time)`);
+    const feedbackEl = document.getElementById('colormap-feedback');
+    if (feedbackEl) {
+      feedbackEl.innerHTML = isCorrect
+        ? '<span class="colormap-feedback-mark colormap-feedback-correct">&#10003;</span>'
+        : '<span class="colormap-feedback-mark colormap-feedback-incorrect">&#10005;</span>';
+    }
+    window.setTimeout(() => {
+      completeTrial({
+        response,
+        duration,
+        isCorrect
+      });
+    }, 500);
+    return;
+  }
+
   const duration = stopTimer();
   isStimulusDisplayed = false;
 
@@ -62,6 +106,23 @@ async function handleResponse(response) {
   const isCorrect = response === correctSide;
   console.log(`trial ${config.trialCounter + 1} correctness: ${isCorrect ? 'correct' : 'incorrect'}`);
 
+  completeTrial({
+    response,
+    duration,
+    isCorrect
+  });
+}
+
+function handleTimeoutNoResponse() {
+  completeTrial({
+    response: 'none',
+    duration: null,
+    isCorrect: null
+  });
+}
+
+function completeTrial({ response, duration, isCorrect }) {
+  const didAnswer = response !== 'none';
   const feedbackEl = document.getElementById('colormap-feedback');
 
   if (config.currentBlock === 'practice-single') {
@@ -82,11 +143,10 @@ async function handleResponse(response) {
       saveResponseToServer({
         participantId,
         response,
-        correct: isCorrect ? 1 : 0,
+        correct: didAnswer ? (isCorrect ? 1 : 0) : 0,
         trialNumber: config.trialCounter,
         timeWhen: now,
         stimuliNumber: trialData.heatmapId,
-        duration,
         responseTime: duration,
         heatmapCondition: trialData.heatmapCondition,
         legendCondition: trialData.legendCondition,
@@ -96,7 +156,19 @@ async function handleResponse(response) {
     }
   }
 
-  if (!isCorrect && feedbackEl) {
+  if (config.exposureMode === 'constant-time') {
+    const rowEl = document.querySelector('.colormap-row');
+    if (rowEl) {
+      rowEl.className = 'colormap-row colormap-placeholder';
+      rowEl.style.opacity = '1';
+      rowEl.innerHTML = '';
+    }
+    if (feedbackEl) feedbackEl.textContent = '';
+    if (typeof onNext === 'function') onNext();
+    return;
+  }
+
+  if (!isCorrect && didAnswer && feedbackEl) {
     feedbackEl.textContent = 'Incorrect';
     setTimeout(() => {
       const rowEl = document.querySelector('.colormap-row');
@@ -115,4 +187,10 @@ async function handleResponse(response) {
       onNext();
     }
   }
+}
+
+function randomInterTrialMs(minMs, maxMs) {
+  const min = Number(minMs || 500);
+  const max = Number(maxMs || 2000);
+  return Math.round(min + Math.random() * Math.max(0, max - min));
 }

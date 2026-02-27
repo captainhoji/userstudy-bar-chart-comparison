@@ -214,7 +214,6 @@ def save_response():
     data = request.get_json()
     fields = [
         "participant_id",
-        "duration",
         "response_time",
         "correct",
         "trial_number",
@@ -226,7 +225,19 @@ def save_response():
         "attention",
         "time_when"
     ]
-    values = [data.get(field) for field in fields]
+    values = [
+        data.get("participant_id"),
+        data.get("response_time"),
+        data.get("correct"),
+        data.get("trial_number"),
+        data.get("stimuli_number"),
+        data.get("response"),
+        data.get("heatmap_condition"),
+        data.get("legend_condition"),
+        data.get("label_condition"),
+        data.get("attention"),
+        data.get("time_when")
+    ]
 
     conn = get_db_connection()
     if conn:
@@ -249,7 +260,6 @@ def save_responses_batch():
 
     fields = [
         "participant_id",
-        "duration",
         "response_time",
         "correct",
         "trial_number",
@@ -266,7 +276,19 @@ def save_responses_batch():
     if conn:
         cursor = conn.cursor()
         for row in responses:
-            values = [row.get(field) for field in fields]
+            values = [
+                row.get("participant_id"),
+                row.get("response_time"),
+                row.get("correct"),
+                row.get("trial_number"),
+                row.get("stimuli_number"),
+                row.get("response"),
+                row.get("heatmap_condition"),
+                row.get("legend_condition"),
+                row.get("label_condition"),
+                row.get("attention"),
+                row.get("time_when")
+            ]
             insert_row(cursor, "Trial_heatmap", fields, values)
         conn.commit()
         conn.close()

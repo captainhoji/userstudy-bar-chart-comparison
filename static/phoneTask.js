@@ -3,27 +3,11 @@ export const PHONE_LIKE_RULE = 'pet-keywords';
 export const PHONE_TIMING = {
   MESSAGE_VISIBLE_MS: 3000,
   GAP_MIN_MS: 500,
-  GAP_MAX_MS: 1000
+  GAP_MAX_MS: 2000
 };
 
 const PHONE_MESSAGES_CSV = '/static/phone_messages.csv';
 const PET_MESSAGES_CSV = '/static/pet_messages.csv';
-
-const PET_KEYWORDS = [
-  // dog-related
-  'leash','walk','bark','wag','treat','fetch','puppy',
-  // cat-related
-  'meow','purr','litter','whisker','scratch','claw','kitten','catnip',
-  // parrot-related
-  'squawk','feather','cage','perch','wing','bird seed','seed',
-  // goldfish-related
-  'bowl','tank','filter','gill','fin','flakes','aquarium','water change','pebble'
-];
-
-function hasPetKeyword(text) {
-  const lower = text.toLowerCase();
-  return PET_KEYWORDS.some((word) => lower.includes(word));
-}
 
 function createMessageElement(message, isActive, likedStatus) {
   const messageEl = document.createElement('div');

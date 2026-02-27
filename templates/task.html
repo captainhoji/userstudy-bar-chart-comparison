@@ -48,8 +48,33 @@
     }
     localStorage.setItem("attention", attention);
 
+    function normalizeExposureMode(value) {
+      const raw = (value || "").trim().toLowerCase();
+      if (raw === "constant-time" || raw === "constant_time" || raw === "constant") return "constant-time";
+      return "self-paced";
+    }
+
+    let exposureMode = normalizeExposureMode(params.get("exposure"));
+    if (!params.get("exposure")) {
+      exposureMode = normalizeExposureMode(localStorage.getItem("exposureMode") || "self-paced");
+    }
+    localStorage.setItem("exposureMode", exposureMode);
+
+    function normalizeSkipPractice(value) {
+      const raw = (value || "").trim().toLowerCase();
+      return raw === "1" || raw === "true" || raw === "yes" || raw === "y";
+    }
+
+    let skipPractice = false;
+    if (params.has("skip_practice")) {
+      skipPractice = normalizeSkipPractice(params.get("skip_practice"));
+    }
+    localStorage.setItem("skipPractice", skipPractice ? "1" : "0");
+
     console.log("Participant ID: " + participantId);
     console.log("Attention: " + attention);
+    console.log("Exposure mode: " + exposureMode);
+    console.log("Skip practice: " + skipPractice);
 
     function goFullscreen() {
       document.documentElement.requestFullscreen().then(() => {
@@ -60,7 +85,7 @@
       });
     }
   </script>
-  <script type="module" src="{{ url_for('static', filename='main.js', v='20260223b') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='main.js', v='20260223e') }}"></script>
 </body>
 
 </html>

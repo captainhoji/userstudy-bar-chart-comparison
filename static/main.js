@@ -1,3 +1,3 @@
 import { initializeStudy } from './study.js';
 
-initializeStudy(participantId, attention);
+initializeStudy(participantId, attention, exposureMode, skipPractice);

@@ -19,7 +19,12 @@ let config = {
   practiceTrials: [],
   realTrials: [],
   trialCounter: 0,
-  realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 }
+  realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
+  exposureMode: 'self-paced',
+  constantExposureMs: 1750,
+  interTrialMinMs: 500,
+  interTrialMaxMs: 2000,
+  skipPractice: false
 };
 
 const phoneTask = createPhoneTask();
@@ -98,7 +103,7 @@ function normalizeAttentionInput(value) {
   return 'dual';
 }
 
-export async function initializeStudy(participantId, attention) {
+export async function initializeStudy(participantId, attention, exposureMode, skipPractice) {
   config.participantId = participantId || localStorage.getItem("participantId");
   const attentionNormalized = normalizeAttentionInput(attention || localStorage.getItem("attention") || "dual");
   if (attentionNormalized === 'sdsd' || attentionNormalized === 'dsds') {
@@ -111,6 +116,8 @@ export async function initializeStudy(participantId, attention) {
     config.attention = attentionNormalized;
   }
   config.currentAttention = config.attentionMode === 'single' ? 'single' : 'dual';
+  config.exposureMode = (exposureMode === 'constant-time') ? 'constant-time' : 'self-paced';
+  config.skipPractice = !!skipPractice;
   config.trials = [];
   if (config.attentionMode === 'mixed') {
     config.practiceSingleTrials = shuffle(buildPracticeTrialsRandom(10));
@@ -153,6 +160,12 @@ export async function initializeStudy(participantId, attention) {
       <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
       Please respond with the <b>left or right arrow key</b>.
     </p>
+    ${config.exposureMode === 'constant-time'
+      ? `<p>
+          Each colormap is shown for <b>a brief time and then disappears</b>.
+          Please respond while the colormap is visible.
+        </p>`
+      : ``}
     <div class="instruction-example-grid">
       ${exampleGrid}
     </div>
@@ -160,8 +173,12 @@ export async function initializeStudy(participantId, attention) {
       The answers for the four examples above (from left to right) are: <b>Right, Left, Right, Left</b>.<br>
       Note that the legend and labels change, so please <b>check the legend on every trial</b>
       to know whether darker colors mean greater or fewer.<br><br>
-      If your response is incorrect, the text <b style="color: #ff001f">“INCORRECT”</b> will be displayed for 1 second.<br>
-      You will also be notified of your accuracy periodically.<br><br>
+      ${config.exposureMode !== 'constant-time'
+      ? `If your response is incorrect, the text <b style="color: #ff001f">“INCORRECT”</b> will be displayed for 1 second.<br>`
+      : `If your response is correct, a bright green checkmark (<b style="color: #B3FFCA">✓</b>) will be displayed.<br>
+      If your response is incorrect, a dark red X (<b style="color: #ff001f">✕</b>) will be displayed.<br>
+      Nothing will be displayed if the colormap disappears before you respond.<br>`}
+      You will be notified of your accuracy periodically.<br><br>
       ${config.attentionMode === 'mixed'
       ? 'Please press the spacebar to begin practice for single-task blocks.'
       : hasPhoneTask
@@ -315,6 +332,25 @@ function startTrials() {
       phoneTask.start();
     }
   }
+
+  if (config.skipPractice) {
+    config.currentBlock = 'real';
+    config.trials = config.realTrials;
+    config.trialCounter = 0;
+    config.realCorrects = 0;
+    config.realTotal = 0;
+    config.realPhoneTotals = { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
+    phoneTask.resetStats();
+    const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+    config.currentAttention = firstRealAttention;
+    if (firstRealAttention === 'dual') {
+      phoneTask.setForcePetOnNextMessage(false);
+      phoneTask.start();
+    } else {
+      phoneTask.pause();
+    }
+  }
+
   loadTrial();
 }
 

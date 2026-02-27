@@ -129,6 +129,22 @@ body.verification-page #title {
     padding: 0 20px 0 0;
 }
 
+.colormap-feedback-mark {
+    display: inline-block;
+    font-size: 48px;
+    font-weight: 1200;
+    line-height: 1;
+    -webkit-text-stroke: 1px #111;
+}
+
+.colormap-feedback-correct {
+    color: #B3FFCA;
+}
+
+.colormap-feedback-incorrect {
+    color: #B91F2D;
+}
+
 .blank-panel {
     width: 70vw;
     height: 80vh;

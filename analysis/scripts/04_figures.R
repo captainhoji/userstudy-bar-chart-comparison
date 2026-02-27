@@ -42,6 +42,31 @@ cousineau_rt_summary <- function(df, condition_cols) {
     )
 }
 
+cousineau_acc_summary <- function(df, condition_cols) {
+  grand_mean <- mean(df$pid_mean_acc, na.rm = TRUE)
+  df_norm <- df %>%
+    group_by(participant_id) %>%
+    mutate(
+      pid_overall_mean = mean(pid_mean_acc, na.rm = TRUE),
+      acc_norm = pid_mean_acc - pid_overall_mean + grand_mean
+    ) %>%
+    ungroup()
+
+  k <- df_norm %>%
+    distinct(across(all_of(condition_cols))) %>%
+    nrow()
+  morey_factor <- if (k > 1) sqrt(k / (k - 1)) else 1
+
+  df_norm %>%
+    group_by(across(all_of(condition_cols))) %>%
+    summarise(
+      mean_of_means_acc = mean(pid_mean_acc, na.rm = TRUE),
+      se = sd(acc_norm, na.rm = TRUE) / sqrt(dplyr::n()) * morey_factor,
+      n_participants = dplyr::n(),
+      .groups = "drop"
+    )
+}
+
 rt_pid_mom <- heatmap_filtered %>%
   filter(correct == 1, !is.na(lightness_mapping)) %>%
   group_by(participant_id, attention, lightness_mapping) %>%
@@ -357,6 +382,70 @@ p_acc_block <- ggplot(acc_block, aes(x = block, y = mean_acc, color = condition,
   ) +
   theme_minimal(base_size = 13)
 
+# Collapsed two-bar figures:
+# 1) dark-more + greater-up
+# 2) all other conditions
+two_bar_data <- heatmap_filtered %>%
+  filter(!is.na(lightness_mapping), !is.na(label_condition)) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    collapsed_condition = dplyr::if_else(
+      lightness_mapping == "dark-more" & label_condition == "greater-up",
+      "dark-more + greater-up",
+      "all other conditions"
+    ),
+    collapsed_condition = factor(
+      collapsed_condition,
+      levels = c("dark-more + greater-up", "all other conditions")
+    )
+  )
+
+rt_two_bar_pid <- two_bar_data %>%
+  filter(correct == 1) %>%
+  group_by(participant_id, attention, collapsed_condition) %>%
+  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
+
+rt_two_bar <- cousineau_rt_summary(rt_two_bar_pid, c("attention", "collapsed_condition"))
+
+p_rt_two_bar <- ggplot(rt_two_bar, aes(x = collapsed_condition, y = mean_of_means_rt, fill = collapsed_condition)) +
+  geom_col(width = 0.6, alpha = 0.9) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
+    width = 0.18,
+    linewidth = 0.7
+  ) +
+  labs(
+    x = "Condition",
+    y = "Mean of participant mean RT (ms)",
+    title = "RT: Dark-More + Greater-Up vs All Others (By Attention)"
+  ) +
+  facet_wrap(~attention, ncol = 2) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+acc_two_bar_pid <- two_bar_data %>%
+  group_by(participant_id, attention, collapsed_condition) %>%
+  summarise(pid_mean_acc = mean(correct, na.rm = TRUE), .groups = "drop")
+
+acc_two_bar <- cousineau_acc_summary(acc_two_bar_pid, c("attention", "collapsed_condition"))
+
+p_acc_two_bar <- ggplot(acc_two_bar, aes(x = collapsed_condition, y = mean_of_means_acc, fill = collapsed_condition)) +
+  geom_col(width = 0.6, alpha = 0.9) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
+    width = 0.18,
+    linewidth = 0.7
+  ) +
+  coord_cartesian(ylim = c(0.5, 1.0)) +
+  labs(
+    x = "Condition",
+    y = "Mean of participant mean accuracy",
+    title = "Accuracy: Dark-More + Greater-Up vs All Others (By Attention)"
+  ) +
+  facet_wrap(~attention, ncol = 2) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
 ggsave(cfg$out_fig_rt_mean_of_means_se, p_rt_mom, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_rt_mean_of_means_se_label, p_rt_mom_label, width = 10, height = 5.5, dpi = 300)
@@ -368,6 +457,8 @@ ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, w
 ggsave(cfg$out_fig_acc_by_participant_label, p_acc_by_participant_label, width = 14, height = 8, dpi = 300)
 ggsave(cfg$out_fig_rt_by_block_attention_mapping, p_rt_block, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, height = 5.5, dpi = 300)
+ggsave(here::here("analysis", "output", "figures", "rt_darkmore_greaterup_vs_others.png"), p_rt_two_bar, width = 8, height = 5, dpi = 300)
+ggsave(here::here("analysis", "output", "figures", "accuracy_darkmore_greaterup_vs_others.png"), p_acc_two_bar, width = 8, height = 5, dpi = 300)
 
 message("Saved figures to: ", dirname(cfg$out_fig_accuracy))
 message("RT figures apply inclusion criterion mean accuracy >= ", cfg$rt_min_accuracy, " (50/80).")
