@@ -154,22 +154,26 @@ export async function savePhoneSummary({
   phoneFalseAlarm,
   phoneCorrectRejection
 }) {
+  const payload = {
+    participant_id: participantId,
+    hit: Number(phoneHit || 0),
+    miss: Number(phoneMiss || 0),
+    false_alarm: Number(phoneFalseAlarm || 0),
+    correct_rejection: Number(phoneCorrectRejection || 0)
+  };
   try {
     const response = await fetch('/save_phone_summary', {
       method: 'POST',
       keepalive: true,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        participant_id: participantId,
-        hit: phoneHit,
-        miss: phoneMiss,
-        false_alarm: phoneFalseAlarm,
-        correct_rejection: phoneCorrectRejection
-      })
+      body: JSON.stringify(payload)
     });
+    if (!response.ok) {
+      console.error('Failed to save phone summary response:', response.status, payload);
+    }
     return response.ok;
   } catch (error) {
-    console.error('Failed to save phone summary:', error);
+    console.error('Failed to save phone summary:', error, payload);
     return false;
   }
 }

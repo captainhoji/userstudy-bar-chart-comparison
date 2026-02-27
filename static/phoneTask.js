@@ -143,6 +143,7 @@ export function createPhoneTask() {
         petCycleCompleted = false;
       })
       .catch(() => {
+        console.error('Failed to load phone CSV files.');
         baseChunks = [];
         phoneChunks = [];
         petMessages = [];
@@ -252,7 +253,11 @@ export function createPhoneTask() {
       forcePetOnNextMessage = false;
       const nextMessage = usePet ? getNextPetMessage() : getNextPhoneMessage();
       currentMessage = nextMessage || getNextPhoneMessage() || getNextPetMessage();
-      if (!currentMessage) return;
+      if (!currentMessage) {
+        console.warn('Phone task has no message to show.');
+        scheduleNextMessage();
+        return;
+      }
       currentLiked = false;
       currentLikedStatus = null;
       currentShouldLike = currentMessage.isPet;

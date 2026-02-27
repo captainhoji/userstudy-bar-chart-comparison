@@ -74,6 +74,11 @@ export function buildHeatmapTrials() {
   return buildTrialsFromHeatmaps(heatmaps);
 }
 
+export function buildBalancedHeatmapTrials(startIndex = 0, countPerSide = 5) {
+  const heatmaps = buildHeatmapList(startIndex, countPerSide);
+  return buildTrialsFromHeatmaps(heatmaps);
+}
+
 export function buildPracticeTrialsRandom(count = 20) {
   const heatmaps = shuffleArray(buildHeatmapList(10, 10));
   const legendConditions = [

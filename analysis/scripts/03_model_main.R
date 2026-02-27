@@ -41,7 +41,7 @@ heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   ) %>%
   mutate(block = factor(block_num, levels = c(1, 2, 3, 4)))
 
-if (!all(c("exclude_tier0", "exclude_tier_000", "exclude_tier1", "exclude_tier2", "exclude_tier3", "exclude_last2_criteria") %in% names(heatmap))) {
+if (!all(c("exclude_tier0", "exclude_tier_000", "exclude_tier1", "exclude_tier2", "exclude_tier3") %in% names(heatmap))) {
   stop("Missing exclusion columns in cleaned data. Re-run 01_clean_trials.R.")
 }
 if (!all(c("attention_c", "label_condition_c", "lightness_mapping_c") %in% names(heatmap))) {
@@ -53,15 +53,13 @@ dat_tier_000 <- heatmap %>% filter(!exclude_tier_000)
 dat_tier1 <- heatmap %>% filter(!exclude_tier1)
 dat_tier2 <- heatmap %>% filter(!exclude_tier2)
 dat_tier3 <- heatmap %>% filter(!exclude_tier3)
-dat_last2_criteria <- heatmap %>% filter(!exclude_last2_criteria)
 
 exclusion_summary <- bind_rows(
-  tibble::tibble(tier = "tier0_ishihara_plus_phone_sdt", n_rows = nrow(dat_tier0), n_participants = n_distinct(dat_tier0$participant_id)),
+  tibble::tibble(tier = "tier0_phone_sdt", n_rows = nrow(dat_tier0), n_participants = n_distinct(dat_tier0$participant_id)),
   tibble::tibble(tier = "tier_000_heatmap_plus_phone_sdt", n_rows = nrow(dat_tier_000), n_participants = n_distinct(dat_tier_000$participant_id)),
   tibble::tibble(tier = "tier1_basic", n_rows = nrow(dat_tier1), n_participants = n_distinct(dat_tier1$participant_id)),
   tibble::tibble(tier = "tier2_plus_participant_rt_outlier", n_rows = nrow(dat_tier2), n_participants = n_distinct(dat_tier2$participant_id)),
-  tibble::tibble(tier = "tier3_plus_trial_rt_outlier", n_rows = nrow(dat_tier3), n_participants = n_distinct(dat_tier3$participant_id)),
-  tibble::tibble(tier = "last2_criteria_only", n_rows = nrow(dat_last2_criteria), n_participants = n_distinct(dat_last2_criteria$participant_id))
+  tibble::tibble(tier = "tier3_plus_trial_rt_outlier", n_rows = nrow(dat_tier3), n_participants = n_distinct(dat_tier3$participant_id))
 )
 readr::write_csv(exclusion_summary, out_exclusion)
 
@@ -210,15 +208,14 @@ run_models_for_tier <- function(dat, tier_name) {
   list(meta = meta, coef = coef)
 }
 
-res_t0 <- run_models_for_tier(dat_tier0, "tier0_ishihara_plus_phone_sdt")
+res_t0 <- run_models_for_tier(dat_tier0, "tier0_phone_sdt")
 res_t000 <- run_models_for_tier(dat_tier_000, "tier_000_heatmap_plus_phone_sdt")
 res_t1 <- run_models_for_tier(dat_tier1, "tier1_basic")
 res_t2 <- run_models_for_tier(dat_tier2, "tier2_plus_participant_rt_outlier")
 res_t3 <- run_models_for_tier(dat_tier3, "tier3_plus_trial_rt_outlier")
-res_last2 <- run_models_for_tier(dat_last2_criteria, "last2_criteria_only")
 
-fit_summary <- bind_rows(res_t0$meta, res_t000$meta, res_t1$meta, res_t2$meta, res_t3$meta, res_last2$meta)
-fixed_effects <- bind_rows(res_t0$coef, res_t000$coef, res_t1$coef, res_t2$coef, res_t3$coef, res_last2$coef)
+fit_summary <- bind_rows(res_t0$meta, res_t000$meta, res_t1$meta, res_t2$meta, res_t3$meta)
+fixed_effects <- bind_rows(res_t0$coef, res_t000$coef, res_t1$coef, res_t2$coef, res_t3$coef)
 
 readr::write_csv(fit_summary, out_fit)
 readr::write_csv(fixed_effects, out_fixed)

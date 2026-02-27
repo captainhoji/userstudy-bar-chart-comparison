@@ -25,7 +25,6 @@ Put these in `data_raw/` (names can be changed in `00_setup.R`):
 - `Trial_heatmap.csv`
 - `Trial_phone.csv`
 - `Practice_heatmap.csv`
-- `Ishihara_test.csv`
 
 ## How to run
 

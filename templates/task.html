@@ -34,9 +34,17 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    let attention = params.get("attention");
-    if (!attention) {
-      attention = localStorage.getItem("attention") || "dual";
+    function normalizeAttention(value) {
+      const raw = (value || "").trim().toLowerCase();
+      if (raw === "single" || raw === "dual") return raw;
+      if (raw === "sdsd" || raw === "mixed-sdsd" || raw === "single-dual-single-dual" || raw === "single_dual_single_dual") return "sdsd";
+      if (raw === "dsds" || raw === "mixed-dsds" || raw === "dual-single-dual-single" || raw === "dual_single_dual_single") return "dsds";
+      return "dual";
+    }
+
+    let attention = normalizeAttention(params.get("attention"));
+    if (!params.get("attention")) {
+      attention = normalizeAttention(localStorage.getItem("attention") || "dual");
     }
     localStorage.setItem("attention", attention);
 
@@ -52,7 +60,7 @@
       });
     }
   </script>
-  <script type="module" src="{{ url_for('static', filename='main.js', v='20260213a') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='main.js', v='20260223b') }}"></script>
 </body>
 
 </html>

@@ -19,16 +19,21 @@ export function loadTrial() {
 
   trialData = config.trials[config.trialCounter];
   if (!trialData) return;
+  if (typeof config.resolveAttention === 'function') {
+    config.currentAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+  } else {
+    config.currentAttention = config.attention;
+  }
 
   displayBlankScreen({
     duration: 500,
-    attention: config.attention,
+    attention: config.currentAttention || config.attention,
     onDone: () => {
       if (typeof config.onPhoneScreenReady === 'function') config.onPhoneScreenReady();
       displayHeatmapTrial({
         trial: trialData,
         scale: localStorage.getItem("scale") || 1,
-        attention: config.attention
+        attention: config.currentAttention || config.attention
       });
       addKeyHandlers(null, handleArrowKeyPress);
       isStimulusDisplayed = true;
@@ -59,7 +64,13 @@ async function handleResponse(response) {
 
   const feedbackEl = document.getElementById('colormap-feedback');
 
-  if (config.currentBlock === 'practice') {
+  if (config.currentBlock === 'practice-single') {
+    config.practiceSingleTotal = (config.practiceSingleTotal || 0) + 1;
+    if (isCorrect) config.practiceSingleCorrects = (config.practiceSingleCorrects || 0) + 1;
+  } else if (config.currentBlock === 'practice-dual') {
+    config.practiceDualTotal = (config.practiceDualTotal || 0) + 1;
+    if (isCorrect) config.practiceDualCorrects = (config.practiceDualCorrects || 0) + 1;
+  } else if (config.currentBlock === 'practice') {
     config.practiceTotal = (config.practiceTotal || 0) + 1;
     if (isCorrect) config.practiceCorrects = (config.practiceCorrects || 0) + 1;
   } else {
@@ -80,7 +91,7 @@ async function handleResponse(response) {
         heatmapCondition: trialData.heatmapCondition,
         legendCondition: trialData.legendCondition,
         labelCondition: trialData.labelCondition,
-        attention: config.attention
+        attention: config.currentAttention || config.attention
       });
     }
   }

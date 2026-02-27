@@ -179,7 +179,8 @@ def save_practice_summary():
 
 @app.route('/save_phone_summary', methods=['POST'])
 def save_phone_summary():
-    data = request.get_json()
+    data = request.get_json() or {}
+    app.logger.info("save_phone_summary payload: %s", data)
     fields = [
         "participant_id",
         "hit",
@@ -187,7 +188,14 @@ def save_phone_summary():
         "false_alarm",
         "correct_rejection"
     ]
-    values = [data.get(field) for field in fields]
+    values = [
+        data.get("participant_id"),
+        int(data.get("hit") or 0),
+        int(data.get("miss") or 0),
+        int(data.get("false_alarm") or 0),
+        int(data.get("correct_rejection") or 0)
+    ]
+    print(values)
 
     conn = get_db_connection()
     if conn:

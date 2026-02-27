@@ -9,13 +9,12 @@ heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
 eligible_ids <- heatmap %>%
-  filter(!exclude_tier_000) %>%
+  filter(!exclude_tier1) %>%
   distinct(participant_id) %>%
   pull(participant_id)
 
 heatmap_filtered <- heatmap %>%
-  filter(participant_id %in% eligible_ids) %>%
-  filter((block_num >= 3 & attention=="dual") | (block_num <= 2 & attention=="single"))
+  filter(participant_id %in% eligible_ids)
 
 # Mean-of-means RT with SE bars:
 # 1) compute participant mean RT per condition

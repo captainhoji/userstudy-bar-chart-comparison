@@ -10,15 +10,13 @@ suppressPackageStartupMessages({
 
 # Central config: adjust file names/paths here only.
 cfg <- list(
-  rt_min_accuracy = 50 / 80, # 50 / 80,
+  rt_min_accuracy = 49.5 / 80, # 50 / 80,
   sdt_ci_z = 1.96,
   raw_trial_heatmap = here::here("analysis", "data_raw", "Trial_heatmap.csv"),
   raw_trial_phone = here::here("analysis", "data_raw", "Trial_phone.csv"),
   raw_practice = here::here("analysis", "data_raw", "Practice_heatmap.csv"),
-  raw_ishihara = here::here("analysis", "data_raw", "Ishihara_test.csv"),
   out_clean_heatmap = here::here("analysis", "data_processed", "heatmap_clean.rds"),
   out_clean_practice = here::here("analysis", "data_processed", "practice_clean.rds"),
-  out_clean_ishihara = here::here("analysis", "data_processed", "ishihara_clean.rds"),
   out_clean_phone = here::here("analysis", "data_processed", "phone_clean.rds"),
   out_phone_sdt = here::here("analysis", "output", "tables", "phone_sdt_by_participant.csv"),
   out_exclusion_summary = here::here("analysis", "output", "tables", "participant_exclusion_summary.csv"),

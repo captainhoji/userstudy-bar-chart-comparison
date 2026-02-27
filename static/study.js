@@ -1,5 +1,5 @@
 import { showInstructionsOverlay, hideInstructionsOverlay } from './instructions.js';
-import { buildHeatmapTrials, buildPracticeTrialsRandom } from './heatmapTrials.js';
+import { buildHeatmapTrials, buildPracticeTrialsRandom, buildBalancedHeatmapTrials } from './heatmapTrials.js';
 import { configureTrialState, loadTrial, handleArrowKeyPress } from './trialLogic.js';
 import { addKeyHandlers, addSingleKeyHandler } from './events.js';
 import { createPhoneTask } from './phoneTask.js';
@@ -10,20 +10,120 @@ import { shuffle } from './utils.js';
 let config = {
   participantId: null,
   attention: 'dual',
+  attentionMode: 'dual',
+  attentionSequence: [],
+  currentAttention: 'dual',
   trials: [],
+  practiceSingleTrials: [],
+  practiceDualTrials: [],
   practiceTrials: [],
   realTrials: [],
-  trialCounter: 0
+  trialCounter: 0,
+  realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 }
 };
 
 const phoneTask = createPhoneTask();
 
+const MIXED_SEQUENCES = {
+  sdsd: ['single', 'dual', 'single', 'dual'],
+  dsds: ['dual', 'single', 'dual', 'single']
+};
+
+function taskModeLabel(attention) {
+  return attention === 'dual' ? 'dual-task' : 'single-task';
+}
+
+function taskModeInstruction(attention) {
+  return attention === 'dual'
+    ? 'both the colormap task and the phone message task'
+    : 'only the colormap task';
+}
+
+function addPhoneStats(acc, delta) {
+  const a = acc || {};
+  const d = delta || {};
+  return {
+    hit: Number(a.hit || 0) + Number(d.hit || 0),
+    miss: Number(a.miss || 0) + Number(d.miss || 0),
+    falseAlarm: Number(a.falseAlarm || 0) + Number(d.falseAlarm || 0),
+    correctRejection: Number(a.correctRejection || 0) + Number(d.correctRejection || 0)
+  };
+}
+
+function getBlockPhoneStats() {
+  const s = phoneTask.getStats() || {};
+  return {
+    total: Number(s.total || 0),
+    correct: Number(s.correct || 0),
+    hit: Number(s.hit || 0),
+    miss: Number(s.miss || 0),
+    falseAlarm: Number(s.falseAlarm || 0),
+    correctRejection: Number(s.correctRejection || 0),
+    accuracy: Number(s.total || 0) > 0 ? Number(s.correct || 0) / Number(s.total || 1) : null
+  };
+}
+
+function cloneTrials(trials) {
+  return trials.map((trial) => ({ ...trial }));
+}
+
+function buildMixedRealTrials(sequence) {
+  // 10 image files total: 5 left-dark + 5 right-dark -> 40 crossed stimuli.
+  // Reuse the exact same 40 once for single-attention and once for dual-attention.
+  const base40 = shuffle(buildBalancedHeatmapTrials(0, 5));
+  const single40 = cloneTrials(base40);
+  const dual40 = cloneTrials(base40);
+  let singleIndex = 0;
+  let dualIndex = 0;
+  const trials = [];
+
+  sequence.forEach((attentionInBlock) => {
+    if (attentionInBlock === 'single') {
+      trials.push(...cloneTrials(single40.slice(singleIndex, singleIndex + 20)));
+      singleIndex += 20;
+    } else {
+      trials.push(...cloneTrials(dual40.slice(dualIndex, dualIndex + 20)));
+      dualIndex += 20;
+    }
+  });
+
+  return trials;
+}
+
+function normalizeAttentionInput(value) {
+  const raw = (value || '').toString().trim().toLowerCase();
+  if (raw === 'single' || raw === 'dual') return raw;
+  if (raw === 'sdsd' || raw === 'mixed-sdsd' || raw === 'single-dual-single-dual' || raw === 'single_dual_single_dual') return 'sdsd';
+  if (raw === 'dsds' || raw === 'mixed-dsds' || raw === 'dual-single-dual-single' || raw === 'dual_single_dual_single') return 'dsds';
+  return 'dual';
+}
+
 export async function initializeStudy(participantId, attention) {
   config.participantId = participantId || localStorage.getItem("participantId");
-  config.attention = attention || localStorage.getItem("attention") || "dual";
-  config.trials = shuffle(buildHeatmapTrials());
-  config.practiceTrials = shuffle(buildPracticeTrialsRandom(20));
-  config.realTrials = config.trials;
+  const attentionNormalized = normalizeAttentionInput(attention || localStorage.getItem("attention") || "dual");
+  if (attentionNormalized === 'sdsd' || attentionNormalized === 'dsds') {
+    config.attentionMode = 'mixed';
+    config.attentionSequence = MIXED_SEQUENCES[attentionNormalized].slice();
+    config.attention = config.attentionSequence[0];
+  } else {
+    config.attentionMode = attentionNormalized;
+    config.attentionSequence = [];
+    config.attention = attentionNormalized;
+  }
+  config.currentAttention = config.attentionMode === 'single' ? 'single' : 'dual';
+  config.trials = [];
+  if (config.attentionMode === 'mixed') {
+    config.practiceSingleTrials = shuffle(buildPracticeTrialsRandom(10));
+    config.practiceDualTrials = shuffle(buildPracticeTrialsRandom(10));
+    config.practiceTrials = [];
+    config.realTrials = buildMixedRealTrials(config.attentionSequence);
+  } else {
+    config.trials = shuffle(buildHeatmapTrials());
+    config.practiceTrials = shuffle(buildPracticeTrialsRandom(20));
+    config.practiceSingleTrials = [];
+    config.practiceDualTrials = [];
+    config.realTrials = config.trials;
+  }
   config.trialCounter = 0;
 
   const exampleImages = [
@@ -37,33 +137,45 @@ export async function initializeStudy(participantId, attention) {
     .map((src) => `<img src="${src}" alt="example heatmap" class="instruction-example-image">`)
     .join("");
 
+  const hasPhoneTask = config.attentionMode === 'dual' || config.attentionMode === 'mixed';
 
   const colormapInstructions = `
-    ${config.attention === 'dual'
-      ? `<p><b>This experiment has two tasks for you to do at the same time, a “colormaps” task and a “phone messages” task.</b><br>
-      On this screen, we will explain instructions for the colormaps task, and on the next screen we will explain the phone messages task.</p>`
-      : ``}
+    ${config.attentionMode === 'mixed'
+      ? `<p>This experiment includes 4 blocks of trials. In all blocks, you will do the colormap task described here.<br><\p>`
+      : hasPhoneTask
+        ? `<p>You will perform <b>two tasks at the same time</b>: a <i>colormap</i> task and a <i>phone message</i> task.<br>
+      On this screen, we will give instructions for the <i>colormap</i> task, and on the next screen we will explain the <i>phone message</i> task.</p>`
+        : ``}
     <p>
-      You will see colormaps representing the amount of animal sightings on a distant planet.
+      You will see colormaps representing the amount of animal sightings on a distant planet called Sparl.
       The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
-      Each map has a legend that uses the labels “greater” and “fewer”.<br>
+      Each map has a <b>legend</b> that uses the labels “greater” and “fewer”.<br>
       <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
-      Respond with the <b>left or right arrow key</b>.
+      Please respond with the <b>left or right arrow key</b>.
     </p>
     <div class="instruction-example-grid">
       ${exampleGrid}
     </div>
     <p>
-      The four examples above (left to right) have answers: <b>Right, Left, Right, Left</b>.<br>
+      The answers for the four examples above (from left to right) are: <b>Right, Left, Right, Left</b>.<br>
       Note that the legend and labels change, so please <b>check the legend on every trial</b>
-      to know whether darker colors mean greater or fewer values.<br><br>
-      If your response is incorrect, <b>“Incorrect”</b> will briefly appear in red above the colormap.<br>
+      to know whether darker colors mean greater or fewer.<br><br>
+      If your response is incorrect, the text <b style="color: #ff001f">“INCORRECT”</b> will be displayed for 1 second.<br>
       You will also be notified of your accuracy periodically.<br><br>
-      ${config.attention === 'dual' ? 'Press the spacebar to continue to phone message instructions.' : 'Please press the spacebar when you are ready to begin.'}
+      ${config.attentionMode === 'mixed'
+      ? 'Please press the spacebar to begin practice for single-task blocks.'
+      : hasPhoneTask
+        ? 'Please press the spacebar to continue to the next instructions.'
+        : 'Please press the spacebar when you are ready to begin.'}
     </p>
   `;
 
   const phoneInstructions = `
+    ${config.attentionMode === 'mixed'
+      ? `<p>In some of the blocks, you will also be doing the phone message task, <i>while</i> doing the colormap task.<br>`
+      : hasPhoneTask
+        ? `<p>You will do the <i>phone message</i> task, <b>while</b> doing the <i>colormap</i> task.<br></p>`
+        : ``}
     <p>
       On the left side of the screen, you will see a phone showing a group chat.
       Imagine you are in a group chat with four friends.<br>
@@ -101,11 +213,14 @@ export async function initializeStudy(participantId, attention) {
       Please respond as quickly and accurately as possible.
     </p>
     <p>
-      If you like a pet-related message in time, the message turns <b>light green</b>.<br>
-      If you like a message that is not about pets, the message turns <b>dark red</b>.<br><br>
-      Please press the spacebar when you are ready to begin.
+      If you like a pet-related message in time, the message turns <b>light green</b> <span style="display: inline-block; width: 12px; height: 12px; background-color: #B3FFCA; border: 1px solid black; vertical-align: middle;"></span>.<br>
+      If you like a message that is not about pets, the message turns <b>dark red</b> <span style="display: inline-block; width: 12px; height: 12px; background-color: #B91F2D; border: 1px solid black; vertical-align: middle;"></span>.<br><br>
+      ${config.attentionMode === 'mixed'
+      ? 'Press the spacebar to begin practice for dual-task blocks.'
+      : 'Please press the spacebar when you are ready to begin.'}
     </p>
   `;
+  config.phoneInstructionsHtml = phoneInstructions;
 
   const practiceStartInstructions = `
     <p>
@@ -117,9 +232,11 @@ export async function initializeStudy(participantId, attention) {
     </p>
   `;
 
-  const instructionPages = config.attention === 'dual'
-    ? [colormapInstructions, phoneInstructions, practiceStartInstructions]
-    : [colormapInstructions, practiceStartInstructions];
+  const instructionPages = config.attentionMode === 'mixed'
+    ? [colormapInstructions]
+    : hasPhoneTask
+      ? [colormapInstructions, phoneInstructions, practiceStartInstructions]
+      : [colormapInstructions, practiceStartInstructions];
 
   let pageIndex = 0;
   const advanceInstruction = () => {
@@ -132,6 +249,18 @@ export async function initializeStudy(participantId, attention) {
   };
 
   const showPage = () => {
+    const sectionTitleEl = document.getElementById("section-title");
+    if (sectionTitleEl) {
+      const isPracticeStartPage = config.attentionMode !== 'mixed' && pageIndex === instructionPages.length - 1;
+      const isPhonePage = hasPhoneTask && pageIndex === 1;
+      if (isPracticeStartPage) {
+        sectionTitleEl.textContent = "Practice Trials";
+      } else {
+        sectionTitleEl.textContent = isPhonePage
+          ? "Instructions: phone message task"
+          : "Instructions: colormap task";
+      }
+    }
     document.getElementById("instruction-text").innerHTML = instructionPages[pageIndex];
     showInstructionsOverlay();
     addKeyHandlers(advanceInstruction);
@@ -145,41 +274,119 @@ function startTrials() {
   configureTrialState(config, handleNext);
   addKeyHandlers(null, handleArrowKeyPress);
   config.trialCounter = 0;
-  config.currentBlock = 'practice';
-  config.trials = config.practiceTrials;
   config.practiceCorrects = 0;
   config.practiceTotal = 0;
+  config.practiceSingleCorrects = 0;
+  config.practiceSingleTotal = 0;
+  config.practiceDualCorrects = 0;
+  config.practiceDualTotal = 0;
   config.realCorrects = 0;
   config.realTotal = 0;
+  config.resolveAttention = (blockName, trialIndex) => {
+    if (blockName === 'practice-single') return 'single';
+    if (blockName === 'practice-dual') return 'dual';
+    if (blockName === 'practice') {
+      return config.attentionMode === 'single' ? 'single' : 'dual';
+    }
+    if (config.attentionMode === 'mixed') {
+      const blockIndex = Math.floor(Number(trialIndex) / 20);
+      const seqIndex = Math.max(0, Math.min(config.attentionSequence.length - 1, blockIndex));
+      return config.attentionSequence[seqIndex];
+    }
+    return config.attention;
+  };
   phoneTask.resetStats();
   config.onPhoneScreenReady = () => {
-    if (config.attention !== 'dual') return;
+    if (config.currentAttention !== 'dual') return;
     const phoneScreen = getPhoneScreen();
     if (phoneScreen) phoneTask.attach(phoneScreen);
   };
-  if (config.attention === 'dual') {
-    phoneTask.setForcePetOnNextMessage(true);
-    phoneTask.start();
+
+  if (config.attentionMode === 'mixed') {
+    config.currentBlock = 'practice-single';
+    config.trials = config.practiceSingleTrials;
+    config.currentAttention = 'single';
+    phoneTask.pause();
+  } else {
+    config.currentBlock = 'practice';
+    config.trials = config.practiceTrials;
+    if (config.resolveAttention(config.currentBlock, config.trialCounter) === 'dual') {
+      phoneTask.setForcePetOnNextMessage(true);
+      phoneTask.start();
+    }
   }
   loadTrial();
 }
 
 async function handleNext() {
   config.trialCounter++;
+  const runningPhoneStats = getBlockPhoneStats();
+  const runningCumulativePhoneStats = addPhoneStats(config.realPhoneTotals, runningPhoneStats);
+  console.log(
+    `Phone stats after trial ${config.trialCounter} (${config.currentBlock}):`,
+    runningCumulativePhoneStats
+  );
   const isLastTrial = config.trialCounter >= config.trials.length;
-  const needsBreak = !isLastTrial && config.trialCounter % 20 === 0;
+  const needsBreak = config.currentBlock === 'real' && !isLastTrial && config.trialCounter % 20 === 0;
 
   if (isLastTrial) {
-    if (config.currentBlock === 'practice') {
+    if (config.currentBlock === 'practice-single') {
       await flushResponseQueue({ timeoutMs: 12000 });
-      if (config.attention === 'dual') phoneTask.pause();
-      const practiceAccuracy = config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal;
+      phoneTask.pause();
+      const practiceAccuracy = config.practiceSingleTotal === 0 ? null : config.practiceSingleCorrects / config.practiceSingleTotal;
+      const lowColormapWarning = (
+        practiceAccuracy !== null &&
+        practiceAccuracy < 0.75
+      )
+        ? `
+          <p style="color:#b00020;">
+            Your accuracy is low. Please <b>read the legend</b> and select the <b>side that shows greater values</b>.
+          </p>
+        `
+        : '';
+      const betweenPracticeHTML = `
+        <p>
+          This is the end of single-task practice.<br>
+          Practice accuracy (colormap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b>
+        </p>
+        ${lowColormapWarning}
+        <p>
+          Press Enter to read the next instruction.
+        </p>
+      `;
+      const sectionTitleEl = document.getElementById("section-title");
+      if (sectionTitleEl) sectionTitleEl.textContent = "Single-task practice";
+      document.getElementById("instruction-text").innerHTML = betweenPracticeHTML;
+      showInstructionsOverlay();
+      addSingleKeyHandler('Enter', () => {
+        const phoneTitleEl = document.getElementById("section-title");
+        if (phoneTitleEl) phoneTitleEl.textContent = "Instructions: phone message task";
+        document.getElementById("instruction-text").innerHTML = config.phoneInstructionsHtml;
+        showInstructionsOverlay();
+        addKeyHandlers(() => {
+          hideInstructionsOverlay();
+          config.currentBlock = 'practice-dual';
+          config.trials = config.practiceDualTrials;
+          config.trialCounter = 0;
+          config.practiceDualCorrects = 0;
+          config.practiceDualTotal = 0;
+          phoneTask.resetStats();
+          config.currentAttention = 'dual';
+          phoneTask.setForcePetOnNextMessage(true);
+          phoneTask.start();
+          loadTrial();
+        });
+      });
+    } else if (config.currentBlock === 'practice-dual') {
+      await flushResponseQueue({ timeoutMs: 12000 });
+      phoneTask.pause();
+      const practiceAccuracy = config.practiceDualTotal === 0 ? null : config.practiceDualCorrects / config.practiceDualTotal;
       const phoneStats = phoneTask.getStats();
-      const practiceAccuracyPhone = config.attention === 'dual' ? phoneStats.accuracy : 1;
-      const practicePhoneHit = config.attention === 'dual' ? phoneStats.hit : null;
-      const practicePhoneMiss = config.attention === 'dual' ? phoneStats.miss : null;
-      const practicePhoneFalseAlarm = config.attention === 'dual' ? phoneStats.falseAlarm : null;
-      const practicePhoneCorrectRejection = config.attention === 'dual' ? phoneStats.correctRejection : null;
+      const practiceAccuracyPhone = phoneStats.accuracy;
+      const practicePhoneHit = phoneStats.hit;
+      const practicePhoneMiss = phoneStats.miss;
+      const practicePhoneFalseAlarm = phoneStats.falseAlarm;
+      const practicePhoneCorrectRejection = phoneStats.correctRejection;
       const participantId = config.participantId || localStorage.getItem("participantId");
       if (participantId) {
         savePracticeSummary({
@@ -192,16 +399,17 @@ async function handleNext() {
           practicePhoneCorrectRejection
         });
       }
+
       const accuracyLine = `
         <p>
           Practice accuracy (colormap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
-          ${config.attention === 'dual'
+          ${config.attentionMode !== 'single'
           ? `Practice accuracy (phone): <b>${practiceAccuracyPhone !== null ? Math.round(practiceAccuracyPhone * 100) : 0}%</b><br>`
           : ''}
         </p>
       `;
       const noHitWarning = (
-        config.attention === 'dual' &&
+        config.attentionMode !== 'single' &&
         (phoneStats.hit || 0) === 0 &&
         (phoneStats.miss || 0) > 0
       )
@@ -218,18 +426,115 @@ async function handleNext() {
       )
         ? `
           <p style="color:#b00020;">
-            Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side that shows greater values</b>.
+            Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side of the colormap that shows greater values</b>.
           </p>
         `
         : '';
       const transitionHTML = `
         <p>
-          This is the end of the practice trials.<br><br>
-          Press Enter when you are ready to start the real trials.
+          This is the end of practice.
         </p>
         ${accuracyLine}
         ${lowColormapWarning}
         ${noHitWarning}
+        <p>
+          The next block will start the real trials.<br>
+          The next block is ${taskModeLabel(config.resolveAttention('real', 0))}.<br>
+          Be ready to do ${taskModeInstruction(config.resolveAttention('real', 0))}.<br><br>
+          Press Enter to start the next block.
+        </p>
+      `;
+      const sectionTitleEl2 = document.getElementById("section-title");
+      if (sectionTitleEl2) sectionTitleEl2.textContent = "Dual-task practice";
+      document.getElementById("instruction-text").innerHTML = transitionHTML;
+      showInstructionsOverlay();
+      addSingleKeyHandler('Enter', () => {
+        hideInstructionsOverlay();
+        config.currentBlock = 'real';
+        config.trials = config.realTrials;
+        config.trialCounter = 0;
+        phoneTask.resetStats();
+        config.realCorrects = 0;
+        config.realTotal = 0;
+        config.realPhoneTotals = { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
+        const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+        config.currentAttention = firstRealAttention;
+        if (firstRealAttention === 'dual') {
+          phoneTask.setForcePetOnNextMessage(false);
+          phoneTask.start();
+        } else {
+          phoneTask.pause();
+        }
+        loadTrial();
+      });
+    } else if (config.currentBlock === 'practice') {
+      await flushResponseQueue({ timeoutMs: 12000 });
+      if (config.currentAttention === 'dual') phoneTask.pause();
+      const practiceAccuracy = config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal;
+      const phoneStats = phoneTask.getStats();
+      const practiceAccuracyPhone = config.attentionMode === 'single' ? 1 : phoneStats.accuracy;
+      const practicePhoneHit = config.attentionMode === 'single' ? null : phoneStats.hit;
+      const practicePhoneMiss = config.attentionMode === 'single' ? null : phoneStats.miss;
+      const practicePhoneFalseAlarm = config.attentionMode === 'single' ? null : phoneStats.falseAlarm;
+      const practicePhoneCorrectRejection = config.attentionMode === 'single' ? null : phoneStats.correctRejection;
+      const participantId = config.participantId || localStorage.getItem("participantId");
+      if (participantId) {
+        savePracticeSummary({
+          participantId,
+          practiceAccuracy,
+          practiceAccuracyPhone,
+          practicePhoneHit,
+          practicePhoneMiss,
+          practicePhoneFalseAlarm,
+          practicePhoneCorrectRejection
+        });
+      }
+      const accuracyLine = `
+        <p>
+          Practice accuracy (colormap): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
+          ${config.attentionMode !== 'single'
+          ? `Practice accuracy (phone): <b>${practiceAccuracyPhone !== null ? Math.round(practiceAccuracyPhone * 100) : 0}%</b><br>`
+          : ''}
+        </p>
+      `;
+      const noHitWarning = (
+        config.attentionMode !== 'single' &&
+        (phoneStats.hit || 0) === 0 &&
+        (phoneStats.miss || 0) > 0
+      )
+        ? `
+          <p style="color:#b00020;">
+            You did not like any pet-related messages. If you ignore pet-related messages again, your friends will be angry.<br>
+            Please <strong>like pet-related messages by pressing the spacebar</strong>.
+          </p>
+        `
+        : '';
+      const lowColormapWarning = (
+        practiceAccuracy !== null &&
+        practiceAccuracy < 0.75
+      )
+        ? `
+          <p style="color:#b00020;">
+            Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side of the colormap that shows greater values</b>.
+          </p>
+        `
+        : '';
+      const transitionHTML = `
+        <p>
+          ${config.attentionMode !== 'mixed'
+          ? 'This is the end of practice.'
+          : `This is the end of ${taskModeLabel(config.currentAttention)} practice.`}
+        </p>
+        ${accuracyLine}
+        ${lowColormapWarning}
+        ${noHitWarning}
+        <p>
+          ${config.attentionMode === 'mixed'
+          ? `The next block is ${taskModeLabel(config.resolveAttention('real', 0))}.<br>
+          Be ready to do ${taskModeInstruction(config.resolveAttention('real', 0))}.<br><br>
+          Press Enter to start the next block.`
+          : 'Press Enter to start the real trials.'}
+        </p>
       `;
       document.getElementById("instruction-text").innerHTML = transitionHTML;
       showInstructionsOverlay();
@@ -241,61 +546,136 @@ async function handleNext() {
         phoneTask.resetStats();
         config.realCorrects = 0;
         config.realTotal = 0;
-        if (config.attention === 'dual') {
+        config.realPhoneTotals = { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
+        const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+        config.currentAttention = firstRealAttention;
+        if (firstRealAttention === 'dual') {
           phoneTask.setForcePetOnNextMessage(false);
           phoneTask.start();
+        } else {
+          phoneTask.pause();
         }
         loadTrial();
       });
     } else {
       await flushResponseQueue({ timeoutMs: 12000 });
-      if (config.attention === 'dual') phoneTask.pause();
-      if (config.attention === 'dual') {
-        const phoneStats = phoneTask.getStats();
+      if (config.currentAttention === 'dual') phoneTask.pause();
+      if (config.attentionMode !== 'single') {
+        const finalBlockStats = getBlockPhoneStats();
+        config.realPhoneTotals = addPhoneStats(config.realPhoneTotals, finalBlockStats);
+        console.log('Final cumulative phone stats before save:', finalBlockStats, 'aggregated:', config.realPhoneTotals);
         const participantId = config.participantId || localStorage.getItem("participantId");
         if (participantId) {
           await savePhoneSummary({
             participantId,
-            phoneHit: phoneStats.hit,
-            phoneMiss: phoneStats.miss,
-            phoneFalseAlarm: phoneStats.falseAlarm,
-            phoneCorrectRejection: phoneStats.correctRejection
+            phoneHit: config.realPhoneTotals.hit,
+            phoneMiss: config.realPhoneTotals.miss,
+            phoneFalseAlarm: config.realPhoneTotals.falseAlarm,
+            phoneCorrectRejection: config.realPhoneTotals.correctRejection
           });
         }
       }
       const pid = config.participantId || localStorage.getItem("participantId") || "";
-      window.location.href = `/ishihara?participant_id=${encodeURIComponent(pid)}`;
+      // if (config.attentionMode === 'mixed') {
+      window.location.href = `/thank_you`;
+      // } else {
+      //   window.location.href = `/ishihara?participant_id=${encodeURIComponent(pid)}`;
+      // }
     }
   } else if (needsBreak) {
     await flushResponseQueue({ timeoutMs: 12000 });
-    if (config.attention === 'dual') phoneTask.pause();
+    if (config.currentAttention === 'dual') phoneTask.pause();
     const heatmapAccuracy = config.currentBlock === 'practice'
       ? (config.practiceTotal === 0 ? null : config.practiceCorrects / config.practiceTotal)
       : (config.realTotal === 0 ? null : config.realCorrects / config.realTotal);
-    const phoneStats = phoneTask.getStats();
-    const phoneAccuracy = config.attention === 'dual' ? phoneStats.accuracy : null;
+    const blockPhoneStats = getBlockPhoneStats();
+    const endedBlockNumber = Math.floor(config.trialCounter / 20);
+    const endedAttention = config.currentBlock === 'real'
+      ? config.resolveAttention('real', Math.max(0, (endedBlockNumber - 1) * 20))
+      : config.currentAttention;
+    const showPhoneAccuracy = config.attentionMode !== 'single' && endedAttention === 'dual';
+    const phoneAccuracy = showPhoneAccuracy ? blockPhoneStats.accuracy : null;
+    config.realPhoneTotals = addPhoneStats(config.realPhoneTotals, blockPhoneStats);
+    phoneTask.resetStats();
+    const nextAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+    const nextBlockNumber = endedBlockNumber + 1;
     const accuracyHTML = `
       <p>
         Accuracy (colormap): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
-        ${config.attention === 'dual'
+        ${showPhoneAccuracy
         ? `Accuracy (phone): <b>${phoneAccuracy !== null ? Math.round(phoneAccuracy * 100) : 0}%</b><br>`
         : ''}
       </p>
     `;
-    const breakHTML = `
-      <p>
-        Break time. Please take a short break.<br><br>
-        Press Enter when you are ready to continue.
-      </p>
-      ${accuracyHTML}
-    `;
-    document.getElementById("instruction-text").innerHTML = breakHTML;
-    showInstructionsOverlay();
-    addSingleKeyHandler('Enter', () => {
-      hideInstructionsOverlay();
-      if (config.attention === 'dual') phoneTask.start();
-      loadTrial();
-    });
+    if (config.attentionMode === 'mixed' && config.currentBlock === 'real') {
+      const sectionTitleEl = document.getElementById("section-title");
+      if (sectionTitleEl) sectionTitleEl.textContent = `End of Block ${endedBlockNumber}`;
+      const breakPageOneHTML = `
+        <p>
+          This is the end of block ${endedBlockNumber}.
+        </p>
+        ${accuracyHTML}
+        <p>
+          Press Enter to continue.
+        </p>
+      `;
+      document.getElementById("instruction-text").innerHTML = breakPageOneHTML;
+      showInstructionsOverlay();
+      addSingleKeyHandler('Enter', () => {
+        const sectionTitleEl2 = document.getElementById("section-title");
+        if (sectionTitleEl2) sectionTitleEl2.textContent = `Start of Block ${nextBlockNumber}`;
+        const breakPageTwoHTML = `
+          <p>
+            Now you will start block ${nextBlockNumber}.<br>
+            Block ${nextBlockNumber} is ${taskModeLabel(nextAttention)}.<br>
+            Please be ready to do ${taskModeInstruction(nextAttention)}.
+          </p>
+          <p>
+            Press Enter to start block ${nextBlockNumber}.
+          </p>
+        `;
+        document.getElementById("instruction-text").innerHTML = breakPageTwoHTML;
+        showInstructionsOverlay();
+        addSingleKeyHandler('Enter', () => {
+          hideInstructionsOverlay();
+          // Reset block-level counters so break feedback is per block, not cumulative.
+          config.realCorrects = 0;
+          config.realTotal = 0;
+          config.currentAttention = nextAttention;
+          if (nextAttention === 'dual') {
+            phoneTask.start();
+          } else {
+            phoneTask.pause();
+          }
+          loadTrial();
+        });
+      });
+    } else {
+      const sectionTitleEl = document.getElementById("section-title");
+      if (sectionTitleEl) sectionTitleEl.textContent = `Break Time`;
+      const breakHTML = `
+        <p>Please take a short break.</p>
+        ${accuracyHTML}
+        <p>
+          Press Enter to start the next block.
+        </p>
+      `;
+      document.getElementById("instruction-text").innerHTML = breakHTML;
+      showInstructionsOverlay();
+      addSingleKeyHandler('Enter', () => {
+        hideInstructionsOverlay();
+        // Reset block-level counters so break feedback is per block, not cumulative.
+        config.realCorrects = 0;
+        config.realTotal = 0;
+        config.currentAttention = nextAttention;
+        if (nextAttention === 'dual') {
+          phoneTask.start();
+        } else {
+          phoneTask.pause();
+        }
+        loadTrial();
+      });
+    }
   } else {
     loadTrial();
   }

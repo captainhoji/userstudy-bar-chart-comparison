@@ -460,11 +460,12 @@ a.button.disabled {
 
 .phone-demo-sender {
     font-weight: 700;
+    font-size: 15px;
     margin-bottom: 4px;
 }
 
 .phone-demo-text {
-    font-size: 13px;
+    font-size: 15px;
 }
 
 .instruction-example-image {
