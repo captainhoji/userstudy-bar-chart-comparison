@@ -16,7 +16,7 @@ if (!file.exists(cfg$out_clean_heatmap)) {
 heatmap <- readRDS(cfg$out_clean_heatmap)
 
 eligible_ids <- heatmap %>%
-  filter(!exclude_tier_000) %>%
+  filter(!exclude_tier1) %>%
   distinct(participant_id) %>%
   pull(participant_id)
 
@@ -27,7 +27,7 @@ heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, sca
 
 m1_all_blocks <- glmer(
   correct ~ label_condition_c*lightness_mapping_c*attention_c*block_c
-  + (1 + label_condition_c + lightness_mapping_c + block_c || participant_id),
+  + (1 + label_condition_c*lightness_mapping_c*block_c | participant_id),
   data = heatmap_filtered,
   family = binomial("logit"),
   control = glmerControl(
@@ -36,16 +36,16 @@ m1_all_blocks <- glmer(
     )
 )
 
-# m1_all_blocks <- lmer(
-#   duration ~ label_condition_c*lightness_mapping_c*attention_c +
-#     (1 + label_condition_c + lightness_mapping_c || participant_id),
-#   data = heatmap_filtered,
-#   control = lmerControl(optimizer = "bobyqa")
-# )
+m1_all_blocks <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c*attention_c +
+    (1 + label_condition_c + lightness_mapping_c || participant_id),
+  data = heatmap_filtered
+  # control = lmerControl(optimizer = "bobyqa")
+)
 
 summary(m1_all_blocks)
 
-if (!require("devtools")) {
+tif (!require("devtools")) {
   install.packages("devtools", dependencies = TRUE)}
 devtools::install_github("DejanDraschkow/mixedpower") # mixedpower is hosted on GitHub
 

@@ -16,20 +16,38 @@ eligible_ids <- heatmap %>%
 heatmap_filtered <- heatmap %>%
   filter(participant_id %in% eligible_ids)
 
-# Mean-of-means RT with SE bars:
-# 1) compute participant mean RT per condition
-# 2) compute across-participant mean and SE for each condition
-rt_mom <- heatmap_filtered %>%
+# Cousineau (with Morey correction) SE for within-subject RT summaries.
+cousineau_rt_summary <- function(df, condition_cols) {
+  grand_mean <- mean(df$pid_mean_rt, na.rm = TRUE)
+  df_norm <- df %>%
+    group_by(participant_id) %>%
+    mutate(
+      pid_overall_mean = mean(pid_mean_rt, na.rm = TRUE),
+      rt_norm = pid_mean_rt - pid_overall_mean + grand_mean
+    ) %>%
+    ungroup()
+
+  k <- df_norm %>%
+    distinct(across(all_of(condition_cols))) %>%
+    nrow()
+  morey_factor <- if (k > 1) sqrt(k / (k - 1)) else 1
+
+  df_norm %>%
+    group_by(across(all_of(condition_cols))) %>%
+    summarise(
+      mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
+      se = sd(rt_norm, na.rm = TRUE) / sqrt(dplyr::n()) * morey_factor,
+      n_participants = dplyr::n(),
+      .groups = "drop"
+    )
+}
+
+rt_pid_mom <- heatmap_filtered %>%
   filter(correct == 1, !is.na(lightness_mapping)) %>%
   group_by(participant_id, attention, lightness_mapping) %>%
-  summarise(pid_mean_rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping) %>%
-  summarise(
-    mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
-    se = sd(pid_mean_rt, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
+
+rt_mom <- cousineau_rt_summary(rt_pid_mom, c("attention", "lightness_mapping")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
@@ -43,7 +61,7 @@ p_rt_mom <- ggplot(rt_mom, aes(x = cell, y = mean_of_means_rt, fill = lightness_
     width = 0.18,
     linewidth = 0.7
   ) +
-  coord_cartesian(ylim = c(1250, 2500)) +
+  coord_cartesian(ylim = c(1500, 2500)) +
   labs(
     x = "Condition",
     y = "Mean of participant mean RT (ms)",
@@ -86,18 +104,12 @@ p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_acc, fill = lightne
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
-# Mean-of-means RT with SE bars by attention x label condition.
-rt_mom_label <- heatmap_filtered %>%
+rt_pid_mom_label <- heatmap_filtered %>%
   filter(correct == 1, !is.na(label_condition)) %>%
   group_by(participant_id, attention, label_condition) %>%
-  summarise(pid_mean_rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, label_condition) %>%
-  summarise(
-    mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
-    se = sd(pid_mean_rt, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
+
+rt_mom_label <- cousineau_rt_summary(rt_pid_mom_label, c("attention", "label_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     label_condition = factor(label_condition, levels = c("greater-up", "fewer-up")),
@@ -111,7 +123,7 @@ p_rt_mom_label <- ggplot(rt_mom_label, aes(x = cell, y = mean_of_means_rt, fill 
     width = 0.18,
     linewidth = 0.7
   ) +
-  coord_cartesian(ylim = c(1250, 2500)) +
+  coord_cartesian(ylim = c(1500, 2500)) +
   labs(
     x = "Condition",
     y = "Mean of participant mean RT (ms)",
@@ -154,18 +166,12 @@ p_acc_mom_label <- ggplot(acc_mom_label, aes(x = cell, y = mean_of_means_acc, fi
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
-# Three-factor RT figure: attention x lightness_mapping x label_condition
-rt_threeway <- heatmap_filtered %>%
+rt_pid_threeway <- heatmap_filtered %>%
   filter(correct == 1, !is.na(lightness_mapping), !is.na(label_condition)) %>%
   group_by(participant_id, attention, lightness_mapping, label_condition) %>%
-  summarise(pid_mean_rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping, label_condition) %>%
-  summarise(
-    mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
-    se = sd(pid_mean_rt, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
+
+rt_threeway <- cousineau_rt_summary(rt_pid_threeway, c("attention", "lightness_mapping", "label_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
@@ -181,7 +187,7 @@ p_rt_threeway <- ggplot(rt_threeway, aes(x = lightness_mapping, y = mean_of_mean
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
   ) +
-  coord_cartesian(ylim = c(1250, 2500)) +
+  coord_cartesian(ylim = c(1500, 2500)) +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
