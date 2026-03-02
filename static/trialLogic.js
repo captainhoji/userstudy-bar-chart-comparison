@@ -117,25 +117,30 @@ function handleTimeoutNoResponse() {
   completeTrial({
     response: 'none',
     duration: null,
-    isCorrect: null
+    isCorrect: null,
+    showTooSlowFeedback: true
   });
 }
 
-function completeTrial({ response, duration, isCorrect }) {
+function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = false }) {
   const didAnswer = response !== 'none';
   const feedbackEl = document.getElementById('colormap-feedback');
 
   if (config.currentBlock === 'practice-single') {
     config.practiceSingleTotal = (config.practiceSingleTotal || 0) + 1;
+    if (!didAnswer) config.practiceSingleMisses = (config.practiceSingleMisses || 0) + 1;
     if (isCorrect) config.practiceSingleCorrects = (config.practiceSingleCorrects || 0) + 1;
   } else if (config.currentBlock === 'practice-dual') {
     config.practiceDualTotal = (config.practiceDualTotal || 0) + 1;
+    if (!didAnswer) config.practiceDualMisses = (config.practiceDualMisses || 0) + 1;
     if (isCorrect) config.practiceDualCorrects = (config.practiceDualCorrects || 0) + 1;
   } else if (config.currentBlock === 'practice') {
     config.practiceTotal = (config.practiceTotal || 0) + 1;
+    if (!didAnswer) config.practiceMisses = (config.practiceMisses || 0) + 1;
     if (isCorrect) config.practiceCorrects = (config.practiceCorrects || 0) + 1;
   } else {
     config.realTotal = (config.realTotal || 0) + 1;
+    if (!didAnswer) config.realMisses = (config.realMisses || 0) + 1;
     if (isCorrect) config.realCorrects = (config.realCorrects || 0) + 1;
     const participantId = config.participantId || localStorage.getItem("participantId");
     if (participantId) {
@@ -163,8 +168,16 @@ function completeTrial({ response, duration, isCorrect }) {
       rowEl.style.opacity = '1';
       rowEl.innerHTML = '';
     }
-    if (feedbackEl) feedbackEl.textContent = '';
-    if (typeof onNext === 'function') onNext();
+    if (showTooSlowFeedback && feedbackEl) {
+      feedbackEl.innerHTML = '<span class="colormap-feedback-too-slow">Timeout</span>';
+      window.setTimeout(() => {
+        feedbackEl.textContent = '';
+        if (typeof onNext === 'function') onNext();
+      }, 500);
+    } else {
+      if (feedbackEl) feedbackEl.textContent = '';
+      if (typeof onNext === 'function') onNext();
+    }
     return;
   }
 

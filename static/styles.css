@@ -145,6 +145,14 @@ body.verification-page #title {
     color: #B91F2D;
 }
 
+.colormap-feedback-too-slow {
+    display: inline-block;
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1;
+    color: #B91F2D;
+}
+
 .blank-panel {
     width: 70vw;
     height: 80vh;

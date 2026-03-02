@@ -148,9 +148,9 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
 
   const colormapInstructions = `
     ${config.attentionMode === 'mixed'
-      ? `<p>This experiment includes 4 blocks of trials. In all blocks, you will do the colormap task described here.<br><\p>`
+      ? `<p>This experiment includes 4 blocks of trials. In all blocks, you will be asked to perform the colormap task described here.<br><\p>`
       : hasPhoneTask
-        ? `<p>You will perform <b>two tasks at the same time</b>: a <i>colormap</i> task and a <i>phone message</i> task.<br>
+        ? `<p>You will be asked to perform <b>two tasks at the same time</b>: a <i>colormap</i> task and a <i>phone message</i> task.<br>
       On this screen, we will give instructions for the <i>colormap</i> task, and on the next screen we will explain the <i>phone message</i> task.</p>`
         : ``}
     <p>
@@ -189,9 +189,9 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
 
   const phoneInstructions = `
     ${config.attentionMode === 'mixed'
-      ? `<p>In some of the blocks, you will also be doing the phone message task, <i>while</i> doing the colormap task.<br>`
+      ? `<p>In some of the blocks, you will also be asked to perform the phone message task, <i>while</i> doing the colormap task.<br>`
       : hasPhoneTask
-        ? `<p>You will do the <i>phone message</i> task, <b>while</b> doing the <i>colormap</i> task.<br></p>`
+        ? `<p>You will be asked to perform the <i>phone message</i> task, <b>while</b> doing the <i>colormap</i> task.<br></p>`
         : ``}
     <p>
       On the left side of the screen, you will see a phone showing a group chat.
@@ -293,12 +293,16 @@ function startTrials() {
   config.trialCounter = 0;
   config.practiceCorrects = 0;
   config.practiceTotal = 0;
+  config.practiceMisses = 0;
   config.practiceSingleCorrects = 0;
   config.practiceSingleTotal = 0;
+  config.practiceSingleMisses = 0;
   config.practiceDualCorrects = 0;
   config.practiceDualTotal = 0;
+  config.practiceDualMisses = 0;
   config.realCorrects = 0;
   config.realTotal = 0;
+  config.realMisses = 0;
   config.resolveAttention = (blockName, trialIndex) => {
     if (blockName === 'practice-single') return 'single';
     if (blockName === 'practice-dual') return 'dual';
@@ -406,6 +410,7 @@ async function handleNext() {
           config.trialCounter = 0;
           config.practiceDualCorrects = 0;
           config.practiceDualTotal = 0;
+          config.practiceDualMisses = 0;
           phoneTask.resetStats();
           config.currentAttention = 'dual';
           phoneTask.setForcePetOnNextMessage(true);
@@ -492,6 +497,7 @@ async function handleNext() {
         phoneTask.resetStats();
         config.realCorrects = 0;
         config.realTotal = 0;
+        config.realMisses = 0;
         config.realPhoneTotals = { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
         const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
         config.currentAttention = firstRealAttention;
@@ -582,6 +588,7 @@ async function handleNext() {
         phoneTask.resetStats();
         config.realCorrects = 0;
         config.realTotal = 0;
+        config.realMisses = 0;
         config.realPhoneTotals = { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 };
         const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
         config.currentAttention = firstRealAttention;
@@ -638,6 +645,7 @@ async function handleNext() {
     const accuracyHTML = `
       <p>
         Accuracy (colormap): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
+        Missed colormaps: <b>${config.realMisses || 0}</b><br>
         ${showPhoneAccuracy
         ? `Accuracy (phone): <b>${phoneAccuracy !== null ? Math.round(phoneAccuracy * 100) : 0}%</b><br>`
         : ''}
@@ -677,6 +685,7 @@ async function handleNext() {
           // Reset block-level counters so break feedback is per block, not cumulative.
           config.realCorrects = 0;
           config.realTotal = 0;
+          config.realMisses = 0;
           config.currentAttention = nextAttention;
           if (nextAttention === 'dual') {
             phoneTask.start();
@@ -703,6 +712,7 @@ async function handleNext() {
         // Reset block-level counters so break feedback is per block, not cumulative.
         config.realCorrects = 0;
         config.realTotal = 0;
+        config.realMisses = 0;
         config.currentAttention = nextAttention;
         if (nextAttention === 'dual') {
           phoneTask.start();
