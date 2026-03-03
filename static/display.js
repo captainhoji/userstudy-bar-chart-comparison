@@ -106,7 +106,7 @@ export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
   }, duration);
 }
 
-export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
+export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual', onDisplayed = null }) {
   const { rowEl, feedbackEl } = ensureLayout(attention);
   if (!rowEl) return;
   const scaleValue = Number(scale) > 0 ? Number(scale) : 1;
@@ -149,6 +149,7 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
 
   let heatmapReady = false;
   let legendReady = false;
+  let shown = false;
 
   function applyLegendSizing() {
     const heatmapHeight = heatmapEl.getBoundingClientRect().height;
@@ -168,9 +169,12 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
   }
 
   function maybeShow() {
-    if (heatmapReady && legendReady && rowEl) {
+    if (heatmapReady && legendReady && rowEl && !shown) {
+      shown = true;
       applyLegendSizing();
       rowEl.style.opacity = '1';
+      startTimer();
+      if (typeof onDisplayed === 'function') onDisplayed();
     }
   }
 
@@ -185,6 +189,4 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual' }) {
 
   heatmapEl.src = trial.heatmapSrc;
   legendEl.src = trial.legendSrc;
-
-  startTimer();
 }

@@ -9,7 +9,7 @@
 <body>
     <div class="consent-container">
         <h1> Survey </h1>
-        <form action="/prolific_id" method="POST">
+        <form id="prolific-form" action="/prolific_id" method="POST">
             <label for="participant_id">Please enter your Prolific ID:</label>
             <input type="text" id="participant_id" name="participant_id" required>
             <button type="submit">Continue</button>
@@ -18,5 +18,12 @@
         <p style="color: red; font-weight: bold;">{{ error_message }}</p>
         {% endif %}
     </div>
+    <script>
+        const form = document.getElementById("prolific-form");
+        if (form) {
+            const query = window.location.search || "";
+            form.action = `/prolific_id${query}`;
+        }
+    </script>
 </body>
 </html>

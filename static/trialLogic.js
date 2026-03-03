@@ -38,21 +38,23 @@ export function loadTrial() {
       displayHeatmapTrial({
         trial: trialData,
         scale: localStorage.getItem("scale") || 1,
-        attention: config.currentAttention || config.attention
-      });
-      addKeyHandlers(null, handleArrowKeyPress);
-      isStimulusDisplayed = true;
+        attention: config.currentAttention || config.attention,
+        onDisplayed: () => {
+          addKeyHandlers(null, handleArrowKeyPress);
+          isStimulusDisplayed = true;
 
-      if (config.exposureMode === 'constant-time') {
-        trialStartTs = performance.now();
-        if (constantExposureTimerId) window.clearTimeout(constantExposureTimerId);
-        constantExposureTimerId = window.setTimeout(() => {
-          constantExposureTimerId = null;
-          if (!isStimulusDisplayed) return;
-          isStimulusDisplayed = false;
-          handleTimeoutNoResponse();
-        }, config.constantExposureMs || 1750);
-      }
+          if (config.exposureMode === 'constant-time') {
+            trialStartTs = performance.now();
+            if (constantExposureTimerId) window.clearTimeout(constantExposureTimerId);
+            constantExposureTimerId = window.setTimeout(() => {
+              constantExposureTimerId = null;
+              if (!isStimulusDisplayed) return;
+              isStimulusDisplayed = false;
+              handleTimeoutNoResponse();
+            }, config.constantExposureMs || 1750);
+          }
+        }
+      });
     }
   });
 }

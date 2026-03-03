@@ -21,7 +21,7 @@ let config = {
   trialCounter: 0,
   realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
   exposureMode: 'self-paced',
-  constantExposureMs: 1750,
+  constantExposureMs: 2000,
   interTrialMinMs: 500,
   interTrialMaxMs: 2000,
   skipPractice: false

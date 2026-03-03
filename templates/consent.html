@@ -40,7 +40,7 @@
             If you decide to participate, you will be asked to look at colormaps and answer questions.
             There will be multiple trials, with each trial lasting a few seconds.
             Then, you will be asked to complete a color vision test.
-            Your participation will last approximately <strong>12 minutes</strong>.
+            Your participation will last approximately <strong>8 minutes</strong>.
         </p>
 
         <p>
@@ -53,9 +53,9 @@
         </p>
 
         <p>
-            If you decide to participate in the study, you will receive <strong>$2.50</strong>.
-            The compensation is based on the Prolific standard rate of $12/hr and the expected duration of 12 minutes.
-            The compensation is $2.50 even if you complete the study faster or slower.
+            If you decide to participate in the study, you will receive <strong>$2.00</strong>.
+            The compensation is based on the Prolific standard rate of $12/hr and the expected duration of 8 minutes.
+            The compensation is $2.00 even if you complete the study faster or slower.
         </p>
 
         <h3>Contact Information</h3>
@@ -75,8 +75,16 @@
 <script>
     const params = new URLSearchParams(window.location.search);
     const attention = params.get("attention");
+    const exposure = params.get("exposure");
+    const skipPractice = params.get("skip_practice");
     if (attention) {
         localStorage.setItem("attention", attention);
+    }
+    if (exposure) {
+        localStorage.setItem("exposureMode", exposure);
+    }
+    if (skipPractice) {
+        localStorage.setItem("skipPractice", skipPractice);
     }
 
     document.getElementById("consentCheck").addEventListener("change", function () {
@@ -84,7 +92,8 @@
     });
 
     document.getElementById("continueBtn").addEventListener("click", function () {
-        window.location.href = "/verification";
+        const query = window.location.search || "";
+        window.location.href = `/verification${query}`;
     });
 </script>
 

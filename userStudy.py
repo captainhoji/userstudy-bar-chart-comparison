@@ -67,7 +67,12 @@ def prolific_id():
             conn.commit()
             conn.close()
             print(f"Participant '{participant_id}' added.")
-            return redirect(url_for('task', participant_id=participant_id))
+            task_kwargs = {'participant_id': participant_id}
+            for key in ('attention', 'exposure', 'skip_practice'):
+                val = request.args.get(key)
+                if val is not None:
+                    task_kwargs[key] = val
+            return redirect(url_for('task', **task_kwargs))
             # return render_template('survey.html', participant_id=participant_id)
         else:
             # participant already exists, so abort

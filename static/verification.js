@@ -8,6 +8,12 @@ minusButton = document.getElementById("minusButton");
 verifyJS();
 verifyCookies();
 
+const readyButton = document.getElementById("readyButton");
+if (readyButton) {
+	const query = window.location.search || "";
+	readyButton.href = `/prolific_id${query}`;
+}
+
 localStorage.setItem("width", 312);
 localStorage.setItem("height", 200);
 localStorage.setItem("scale", 1.0);
