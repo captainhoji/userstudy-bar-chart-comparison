@@ -3,7 +3,7 @@ export const PHONE_LIKE_RULE = 'pet-keywords';
 export const PHONE_TIMING = {
   MESSAGE_VISIBLE_MS: 3000,
   GAP_MIN_MS: 500,
-  GAP_MAX_MS: 2000
+  GAP_MAX_MS: 1000
 };
 
 const PHONE_MESSAGES_CSV = '/static/phone_messages.csv';

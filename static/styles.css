@@ -349,7 +349,7 @@ a.button.disabled {
 }
 
 #section-title {
-    font-size: 30px;
+    font-size: 24px;
 }
 
 #instruction-overlay {
@@ -386,7 +386,7 @@ a.button.disabled {
 }
 
 #instruction-text {
-    font-size: 20px;
+    font-size: 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -440,6 +440,13 @@ a.button.disabled {
     grid-template-columns: repeat(4, minmax(80px, 1fr));
     gap: 10px;
     margin: 16px 0;
+}
+
+.instruction-example-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 8px;
 }
 
 .instruction-phone-row {
@@ -499,6 +506,32 @@ a.button.disabled {
     border-radius: 6px;
     border: 1px solid #ddd;
     background: #f7f7f7;
+}
+
+.instruction-example-caption {
+    margin-top: 8px;
+}
+
+.instruction-example-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.instruction-example-details {
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.inline-legend-slot {
+    display: inline-block !important;
+    width: 4px;
+    height: 20px;
+    object-fit: fill !important;
+    vertical-align: middle;
+    margin: 0 0 0 0;
+    border: 1px solid #111;
+    background: #fff;
 }
 
 .note {

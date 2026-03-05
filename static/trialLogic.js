@@ -10,6 +10,7 @@ let onNext = null;
 let isStimulusDisplayed = false;
 let constantExposureTimerId = null;
 let trialStartTs = null;
+const FEEDBACK_DURATION = 500;
 
 export function configureTrialState(state, nextCallback) {
   config = state;
@@ -96,7 +97,7 @@ async function handleResponse(response) {
         duration,
         isCorrect
       });
-    }, 500);
+    }, FEEDBACK_DURATION);
     return;
   }
 
@@ -175,7 +176,7 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
       window.setTimeout(() => {
         feedbackEl.textContent = '';
         if (typeof onNext === 'function') onNext();
-      }, 500);
+      }, FEEDBACK_DURATION);
     } else {
       if (feedbackEl) feedbackEl.textContent = '';
       if (typeof onNext === 'function') onNext();

@@ -21,9 +21,9 @@ let config = {
   trialCounter: 0,
   realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
   exposureMode: 'self-paced',
-  constantExposureMs: 2000,
+  constantExposureMs: 1750,
   interTrialMinMs: 500,
-  interTrialMaxMs: 2000,
+  interTrialMaxMs: 1000,
   skipPractice: false
 };
 
@@ -134,14 +134,38 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
   config.trialCounter = 0;
 
   const exampleImages = [
-    "/static/stimuli/ex_darkUp_greaterUp.png",
-    "/static/stimuli/ex_darkUp_fewerUp.png",
-    "/static/stimuli/ex_lightUp_greaterUp.png",
-    "/static/stimuli/ex_lightUp_fewerUp.png"
+    {
+      src: "/static/stimuli/ex_darkUp_greaterUp.png",
+      title: "Example 1",
+      details: "There are more animals late in the day, so the answer is <b>RIGHT</b>."
+    },
+    {
+      src: "/static/stimuli/ex_darkUp_fewerUp.png",
+      title: "Example 2",
+      details: "There are more animals early in the day, so the answer is <b>LEFT</b>."
+    },
+    {
+      src: "/static/stimuli/ex_lightUp_greaterUp.png",
+      title: "Example 3",
+      details: "There are more animals late in the day, so the answer is <b>RIGHT</b>."
+    },
+    {
+      src: "/static/stimuli/ex_lightUp_fewerUp.png",
+      title: "Example 4",
+      details: "There are more animals early in the day, so the answer is <b>LEFT</b>."
+    }
   ];
 
   const exampleGrid = exampleImages
-    .map((src) => `<img src="${src}" alt="example heatmap" class="instruction-example-image">`)
+    .map((item) => `
+      <div class="instruction-example-card">
+        <img src="${item.src}" alt="example heatmap" class="instruction-example-image">
+        <div class="instruction-example-caption">
+          <div class="instruction-example-title">${item.title}</div>
+          <div class="instruction-example-details">${item.details}</div>
+        </div>
+      </div>
+    `)
     .join("");
 
   const hasPhoneTask = config.attentionMode === 'dual' || config.attentionMode === 'mixed';
@@ -151,33 +175,33 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
       ? `<p>This experiment includes 4 blocks of trials. In all blocks, you will be asked to perform the colormap task described here.<br><\p>`
       : hasPhoneTask
         ? `<p>You will be asked to perform <b>two tasks at the same time</b>: a <i>colormap</i> task and a <i>phone message</i> task.<br>
-      On this screen, we will give instructions for the <i>colormap</i> task, and on the next screen we will explain the <i>phone message</i> task.</p>`
+      On this screen, we will give instructions for the <i>colormap</i> task, and on the next screen we will explain the <i>phone message</i> task.</p><br>`
         : ``}
     <p>
       You will see colormaps representing the amount of animal sightings on a distant planet called Sparl.
-      The x-axis represents time of day (early on the left, late on the right), and the y-axis represents type of animal.
-      Each map has a <b>legend</b> that uses the labels “greater” and “fewer”.<br>
+      The x-axis represents time of day, and the y-axis represents type of animal.<br>
+      Each colormap has a <b>legend</b> that uses the labels “greater” and “fewer”.<br>
       <b>Your task</b> is to indicate whether there are more animals early (left) or late (right) in the day.
       Please respond with the <b>left or right arrow key</b>.
     </p>
+    <div class="instruction-example-grid">
+      ${exampleGrid}
+    </div>
     ${config.exposureMode === 'constant-time'
       ? `<p>
           Each colormap is shown for <b>a brief time and then disappears</b>.
           Please respond while the colormap is visible.
         </p>`
       : ``}
-    <div class="instruction-example-grid">
-      ${exampleGrid}
-    </div>
     <p>
-      The answers for the four examples above (from left to right) are: <b>Right, Left, Right, Left</b>.<br>
-      Note that the legend and labels change, so please <b>check the legend on every trial</b>
-      to know whether darker colors mean greater or fewer.<br><br>
+      Please <b>check the legend on every trial</b> to know which color means greater.<br>
+    </p>
+    <p>
       ${config.exposureMode !== 'constant-time'
       ? `If your response is incorrect, the text <b style="color: #ff001f">“INCORRECT”</b> will be displayed for 1 second.<br>`
       : `If your response is correct, a bright green checkmark (<b style="color: #B3FFCA">✓</b>) will be displayed.<br>
       If your response is incorrect, a dark red X (<b style="color: #ff001f">✕</b>) will be displayed.<br>
-      Nothing will be displayed if the colormap disappears before you respond.<br>`}
+      If the colormap disappears before you respond, "<b style="color: #ff001f">Timeout</b>" will be displayed.<br>`}
       You will be notified of your accuracy periodically.<br><br>
       ${config.attentionMode === 'mixed'
       ? 'Please press the spacebar to begin practice for single-task blocks.'

@@ -207,15 +207,10 @@ participant_summary <- participant_summary %>%
       mean_rt < (rt_mean_of_means - 2 * rt_sd_of_means) |
         mean_rt > (rt_mean_of_means + 2 * rt_sd_of_means)
     },
-    exclude_tier2 = exclude_tier1 | tier2_participant_rt_outlier
+    exclude_tier2 = tier2_participant_rt_outlier
   )
 
-tier2_kept_ids <- participant_summary %>%
-  filter(!exclude_tier2) %>%
-  pull(participant_id)
-
 tier3_trial_flags <- heatmap %>%
-  filter(participant_id %in% tier2_kept_ids) %>%
   group_by(participant_id) %>%
   mutate(
     p_mean_rt = mean(duration, na.rm = TRUE),
@@ -228,6 +223,21 @@ tier3_trial_flags <- heatmap %>%
   ) %>%
   ungroup() %>%
   select(participant_id, trial_index, tier3_trial_rt_outlier)
+
+tier3_participant_flags <- tier3_trial_flags %>%
+  group_by(participant_id) %>%
+  summarise(
+    tier3_participant_rt_outlier = any(tier3_trial_rt_outlier, na.rm = TRUE),
+    exclude_tier3 = tier3_participant_rt_outlier,
+    .groups = "drop"
+  )
+
+participant_summary <- participant_summary %>%
+  left_join(tier3_participant_flags, by = "participant_id") %>%
+  mutate(
+    tier3_participant_rt_outlier = dplyr::coalesce(tier3_participant_rt_outlier, FALSE),
+    exclude_tier3 = dplyr::coalesce(exclude_tier3, FALSE)
+  )
 
 heatmap <- heatmap %>%
   left_join(
@@ -245,14 +255,15 @@ heatmap <- heatmap %>%
         tier1_exclude_low_heatmap_accuracy,
         exclude_tier1,
         tier2_participant_rt_outlier,
-        exclude_tier2
+        exclude_tier2,
+        tier3_participant_rt_outlier
       ),
     by = "participant_id"
   ) %>%
   left_join(tier3_trial_flags, by = c("participant_id", "trial_index")) %>%
   mutate(
     tier3_trial_rt_outlier = dplyr::coalesce(tier3_trial_rt_outlier, FALSE),
-    exclude_tier3 = exclude_tier2 | tier3_trial_rt_outlier
+    exclude_tier3 = tier3_trial_rt_outlier
   )
 
 exclusion_summary <- participant_summary %>%
@@ -284,6 +295,8 @@ exclusion_summary <- participant_summary %>%
     excluded,
     tier2_participant_rt_outlier,
     exclude_tier2,
+    tier3_participant_rt_outlier,
+    exclude_tier3,
     exclusion_reason
   )
 
