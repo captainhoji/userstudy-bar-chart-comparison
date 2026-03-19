@@ -1,0 +1,45 @@
+Model formula:
+response_time ~ task * color + (1 + task * color | participant_id)
+
+Model summary:
+Linear mixed model fit by maximum likelihood  ['lmerMod']
+Formula: response_time ~ task * color + (1 + task * color | participant_id)
+   Data: model_data
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  14246.0   14379.3   -7095.0   14190.0       836 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.9076 -0.4376 -0.1578  0.2244 15.3943 
+
+Random effects:
+ Groups         Name         Variance Std.Dev. Corr                         
+ participant_id (Intercept)   47782   218.59                                
+                task1         80885   284.40   -1.00                        
+                color1         5959    77.19   -0.21  0.21                  
+                color2         1489    38.58   -0.99  0.99  0.04            
+                task1:color1  16024   126.59   -0.95  0.95 -0.09  0.99      
+                task1:color2  11581   107.62    1.00 -1.00 -0.19 -0.99 -0.96
+ Residual                    772911   879.15                                
+Number of obs: 864, groups:  participant_id, 9
+
+Fixed effects:
+             Estimate Std. Error t value
+(Intercept)  1500.213     78.763  19.047
+task1        -577.153    112.096  -5.149
+color1        -16.265     49.510  -0.329
+color2        -86.175     44.210  -1.949
+task1:color1    1.785     94.536   0.019
+task1:color2  110.507     91.888   1.203
+
+Correlation of Fixed Effects:
+            (Intr) task1  color1 color2 tsk1:1
+task1       -0.782                            
+color1      -0.103  0.094                     
+color2      -0.265  0.242 -0.402              
+task1:colr1 -0.394  0.360 -0.021  0.129       
+task1:colr2  0.361 -0.330 -0.038 -0.112 -0.579
+optimizer (nloptwrap) convergence code: 0 (OK)
+boundary (singular) fit: see help('isSingular')
+

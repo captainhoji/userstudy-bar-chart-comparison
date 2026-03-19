@@ -47,6 +47,8 @@ export function createPhoneTask() {
   let petCycleCompleted = false;
   let loadPromise = null;
   let forcePetOnNextMessage = false;
+  // Allow per-study overrides (e.g., shorter phone display in bar-chart mode).
+  let messageVisibleMs = PHONE_TIMING.MESSAGE_VISIBLE_MS;
 
   function parsePhoneCsv(text) {
     const lines = text.trim().split('\n');
@@ -264,7 +266,7 @@ export function createPhoneTask() {
           clearCurrentMessageState();
           scheduleNextMessage();
         }
-      }, PHONE_TIMING.MESSAGE_VISIBLE_MS);
+      }, messageVisibleMs);
     }, delay);
   }
 
@@ -330,6 +332,13 @@ export function createPhoneTask() {
     },
     setForcePetOnNextMessage(shouldForce) {
       forcePetOnNextMessage = !!shouldForce;
+    },
+    setMessageVisibleMs(ms) {
+      const numeric = Number(ms);
+      // Guard against invalid/too-small values that make the task unusable.
+      messageVisibleMs = Number.isFinite(numeric) && numeric >= 250
+        ? Math.round(numeric)
+        : PHONE_TIMING.MESSAGE_VISIBLE_MS;
     }
   };
 }

@@ -9,7 +9,8 @@ heatmap <- readRDS(cfg$out_clean_heatmap) %>%
   mutate(attention = factor(attention, levels = c("single", "dual")))
 
 eligible_ids <- heatmap %>%
-  # filter(!exclude_tier1) %>%
+  filter(!tier1_exclude_low_phone_sdt) %>%
+  filter(!tier1_exclude_incomplete_trials) %>%
   distinct(participant_id) %>%
   pull(participant_id)
 
@@ -31,43 +32,14 @@ unanswered_by_lightness_label_pid <- heatmap %>%
     participant_id,
     attention = c("single", "dual"),
     lightness_mapping = c("dark-more", "light-more"),
-    label_condition = c("greater-up", "fewer-up"),
+    label_condition = c("high-more", "low-more"),
     fill = list(unanswered_pct = 0)
   ) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
-
-unanswered_by_lightness_label <- unanswered_by_lightness_label_pid %>%
-  group_by(attention, lightness_mapping, label_condition) %>%
-  summarise(
-    mean_unanswered_pct = mean(unanswered_pct, na.rm = TRUE),
-    se = sd(unanswered_pct, na.rm = TRUE) / sqrt(dplyr::n()),
-    n_participants = dplyr::n(),
-    .groups = "drop"
-  )
-
-p_unanswered_by_lightness_label <- ggplot(
-  unanswered_by_lightness_label,
-  aes(x = label_condition, y = mean_unanswered_pct, fill = lightness_mapping)
-) +
-  geom_col(position = position_dodge(width = 0.75), width = 0.7, alpha = 0.9) +
-  geom_errorbar(
-    aes(ymin = mean_unanswered_pct - se, ymax = mean_unanswered_pct + se),
-    width = 0.18,
-    linewidth = 0.7,
-    position = position_dodge(width = 0.75)
-  ) +
-  facet_wrap(~attention) +
-  labs(
-    x = "Label condition",
-    y = "Unanswered trials (%)",
-    title = "Percentage of Unanswered Trials by Lightness Mapping and Label",
-    fill = "Lightness mapping"
-  ) +
-  theme_minimal(base_size = 12)
 
 cousineau_err_summary <- function(df, condition_cols) {
   grand_mean <- mean(df$pid_mean_err, na.rm = TRUE)
@@ -94,17 +66,68 @@ cousineau_err_summary <- function(df, condition_cols) {
     )
 }
 
+cousineau_unanswered_summary <- function(df, condition_cols) {
+  grand_mean <- mean(df$pid_mean_unanswered, na.rm = TRUE)
+  df_norm <- df %>%
+    group_by(participant_id) %>%
+    mutate(
+      pid_overall_mean = mean(pid_mean_unanswered, na.rm = TRUE),
+      unanswered_norm = pid_mean_unanswered - pid_overall_mean + grand_mean
+    ) %>%
+    ungroup()
+
+  k <- df_norm %>%
+    distinct(across(all_of(condition_cols))) %>%
+    nrow()
+  morey_factor <- if (k > 1) sqrt(k / (k - 1)) else 1
+
+  df_norm %>%
+    group_by(across(all_of(condition_cols))) %>%
+    summarise(
+      mean_unanswered_pct = mean(pid_mean_unanswered, na.rm = TRUE),
+      se = sd(unanswered_norm, na.rm = TRUE) / sqrt(dplyr::n()) * morey_factor,
+      n_participants = dplyr::n(),
+      .groups = "drop"
+    )
+}
+
+# Shared lightness-mapping palette requested by user:
+# dark-more = black, light-more = white (with black outlines on bars).
+lightness_fill_scale <- scale_fill_manual(
+  values = c("dark-more" = "gray30", "light-more" = "white"),
+  drop = FALSE
+)
+
+unanswered_by_lightness_label <- unanswered_by_lightness_label_pid %>%
+  rename(pid_mean_unanswered = unanswered_pct) %>%
+  cousineau_unanswered_summary(c("attention", "lightness_mapping", "label_condition"))
+
+p_unanswered_by_lightness_label <- ggplot(
+  unanswered_by_lightness_label,
+  aes(x = label_condition, y = mean_unanswered_pct, fill = lightness_mapping)
+) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7, alpha = 0.9, color = "black") +
+  geom_errorbar(
+    aes(ymin = mean_unanswered_pct - se, ymax = mean_unanswered_pct + se),
+    width = 0.18,
+    linewidth = 0.7,
+    position = position_dodge(width = 0.75)
+  ) +
+  facet_wrap(~attention) +
+  labs(
+    x = "Label condition",
+    y = "Unanswered trials (%)",
+    title = "Percentage of Unanswered Trials by Lightness Mapping and Label",
+    fill = "Lightness mapping"
+  ) +
+  lightness_fill_scale +
+  theme_minimal(base_size = 12)
+
 acc_mom <- accuracy_data %>%
   filter(!is.na(lightness_mapping)) %>%
   group_by(participant_id, attention, lightness_mapping) %>%
   summarise(pid_mean_err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping) %>%
-  summarise(
-    mean_of_means_err = mean(pid_mean_err, na.rm = TRUE),
-    se = sd(pid_mean_err, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  cousineau_err_summary(c("attention", "lightness_mapping")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
@@ -112,7 +135,7 @@ acc_mom <- accuracy_data %>%
   )
 
 p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_err, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9) +
+  geom_col(width = 0.65, alpha = 0.9, color = "black") +
   geom_errorbar(
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
@@ -124,6 +147,7 @@ p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_err, fill = lightne
     y = "Mean of participant mean error rate",
     title = "Error Rate Mean of Means with SE"
   ) +
+  lightness_fill_scale +
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
@@ -131,16 +155,10 @@ acc_mom_label <- accuracy_data %>%
   filter(!is.na(label_condition)) %>%
   group_by(participant_id, attention, label_condition) %>%
   summarise(pid_mean_err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, label_condition) %>%
-  summarise(
-    mean_of_means_err = mean(pid_mean_err, na.rm = TRUE),
-    se = sd(pid_mean_err, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  cousineau_err_summary(c("attention", "label_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up")),
+    label_condition = factor(label_condition, levels = c("high-more", "low-more")),
     cell = interaction(attention, label_condition, sep = " | ", lex.order = TRUE)
   )
 
@@ -164,21 +182,15 @@ acc_threeway <- accuracy_data %>%
   filter(!is.na(lightness_mapping), !is.na(label_condition)) %>%
   group_by(participant_id, attention, lightness_mapping, label_condition) %>%
   summarise(pid_mean_err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping, label_condition) %>%
-  summarise(
-    mean_of_means_err = mean(pid_mean_err, na.rm = TRUE),
-    se = sd(pid_mean_err, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  cousineau_err_summary(c("attention", "lightness_mapping", "label_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
 
 p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_means_err, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7), color = "black") +
   geom_errorbar(
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
@@ -192,6 +204,7 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
     y = "Mean of participant mean error rate",
     title = "Error Rate by Attention, Lightness Mapping, and Label Condition"
   ) +
+  lightness_fill_scale +
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
@@ -209,24 +222,18 @@ error_data_including_unanswered <- heatmap %>%
 err_threeway_including_unanswered <- error_data_including_unanswered %>%
   group_by(participant_id, attention, lightness_mapping, label_condition) %>%
   summarise(pid_mean_err = mean(trial_error_including_unanswered, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping, label_condition) %>%
-  summarise(
-    mean_of_means_err = mean(pid_mean_err, na.rm = TRUE),
-    se = sd(pid_mean_err, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  cousineau_err_summary(c("attention", "lightness_mapping", "label_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
 
 p_err_threeway_including_unanswered <- ggplot(
   err_threeway_including_unanswered,
   aes(x = lightness_mapping, y = mean_of_means_err, fill = lightness_mapping)
 ) +
-  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7), color = "black") +
   geom_errorbar(
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
@@ -240,20 +247,53 @@ p_err_threeway_including_unanswered <- ggplot(
     y = "Mean of participant error rate (incorrect + unanswered)",
     title = "Error Rate (Incorrect + Unanswered) by Attention, Lightness Mapping, and Label"
   ) +
+  lightness_fill_scale +
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
+
+# Error-rate plot stratified by answer_direction (answered trials only).
+err_fourway_answer_direction <- accuracy_data %>%
+  filter(
+    !is.na(lightness_mapping),
+    !is.na(label_condition),
+    !is.na(answer_direction)
+  ) %>%
+  group_by(participant_id, attention, lightness_mapping, label_condition, answer_direction) %>%
+  summarise(pid_mean_err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
+  cousineau_err_summary(c("attention", "lightness_mapping", "label_condition", "answer_direction")) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
+    label_condition = factor(label_condition, levels = c("high-more", "low-more")),
+    answer_direction = factor(answer_direction, levels = c("right", "left"))
+  )
+
+p_err_fourway_answer_direction <- ggplot(
+  err_fourway_answer_direction,
+  aes(x = lightness_mapping, y = mean_of_means_err, fill = answer_direction)
+) +
+  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
+    width = 0.18,
+    linewidth = 0.7,
+    position = position_dodge(width = 0.7)
+  ) +
+  coord_cartesian(ylim = c(0.0, 0.5)) +
+  facet_grid(attention ~ label_condition) +
+  labs(
+    x = "Lightness mapping",
+    y = "Mean of participant mean error rate",
+    title = "Error Rate by Attention, Lightness Mapping, Label, and Answer Direction",
+    fill = "Answer direction"
+  ) +
+  theme_minimal(base_size = 13)
 
 acc_threeway_legend <- accuracy_data %>%
   filter(!is.na(lightness_mapping), !is.na(legend_condition)) %>%
   group_by(participant_id, attention, lightness_mapping, legend_condition) %>%
   summarise(pid_mean_err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
-  group_by(attention, lightness_mapping, legend_condition) %>%
-  summarise(
-    mean_of_means_err = mean(pid_mean_err, na.rm = TRUE),
-    se = sd(pid_mean_err, na.rm = TRUE) / sqrt(n()),
-    n_participants = n(),
-    .groups = "drop"
-  ) %>%
+  cousineau_err_summary(c("attention", "lightness_mapping", "legend_condition")) %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
@@ -261,7 +301,7 @@ acc_threeway_legend <- accuracy_data %>%
   )
 
 p_acc_threeway_legend <- ggplot(acc_threeway_legend, aes(x = lightness_mapping, y = mean_of_means_err, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7), color = "black") +
   geom_errorbar(
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
@@ -275,6 +315,7 @@ p_acc_threeway_legend <- ggplot(acc_threeway_legend, aes(x = lightness_mapping, 
     y = "Mean of participant mean error rate",
     title = "Error Rate by Attention, Lightness Mapping, and Legend Direction"
   ) +
+  lightness_fill_scale +
   theme_minimal(base_size = 13) +
   theme(legend.title = element_blank())
 
@@ -311,7 +352,7 @@ acc_by_participant_label <- accuracy_data %>%
   summarise(err = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
 
 p_acc_by_participant_label <- ggplot(
@@ -359,6 +400,7 @@ rt_answered_threeway <- heatmap %>%
   filter(
     participant_id %in% eligible_ids,
     response != "none",
+    correct == 1,
     !is.na(duration),
     !is.na(lightness_mapping),
     !is.na(label_condition)
@@ -375,14 +417,14 @@ rt_answered_threeway <- heatmap %>%
   mutate(
     attention = factor(attention, levels = c("single", "dual")),
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
 
 p_rt_answered_threeway <- ggplot(
   rt_answered_threeway,
   aes(x = label_condition, y = mean_of_means_rt, fill = lightness_mapping)
 ) +
-  geom_col(position = position_dodge(width = 0.75), width = 0.7, alpha = 0.9) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7, alpha = 0.9, color = "black") +
   geom_errorbar(
     aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
     width = 0.18,
@@ -396,6 +438,7 @@ p_rt_answered_threeway <- ggplot(
     title = "Answered-Trial RT by Attention, Lightness Mapping, and Label",
     fill = "Lightness mapping"
   ) +
+  lightness_fill_scale +
   theme_minimal(base_size = 12)
 
 rt_answered_distribution <- heatmap %>%
@@ -408,7 +451,7 @@ rt_answered_distribution <- heatmap %>%
   ) %>%
   mutate(
     lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
   )
 
 p_rt_answered_distribution <- ggplot(
@@ -430,6 +473,7 @@ ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dp
 ggsave(cfg$out_fig_acc_mean_of_means_se_label, p_acc_mom_label, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 12, height = 6, dpi = 300)
 ggsave(here::here("analysis", "exp2", "output", "figures", "error_rate_including_unanswered_by_attention_lightness_label.png"), p_err_threeway_including_unanswered, width = 12, height = 6, dpi = 300)
+ggsave(here::here("analysis", "exp2", "output", "figures", "error_rate_by_attention_lightness_label_answer_direction.png"), p_err_fourway_answer_direction, width = 12, height = 6, dpi = 300)
 ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, width = 14, height = 8, dpi = 300)
 ggsave(cfg$out_fig_acc_by_participant_label, p_acc_by_participant_label, width = 14, height = 8, dpi = 300)
 ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, height = 5.5, dpi = 300)

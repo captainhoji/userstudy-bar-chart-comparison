@@ -48,6 +48,32 @@
     }
     localStorage.setItem("attention", attention);
 
+    function normalizeStimuli(value) {
+      const raw = (value || "").trim().toLowerCase();
+      if (raw === "barchart" || raw === "bar-chart" || raw === "bar_chart") return "barchart";
+      return raw === "linechart" ? "linechart" : "colormap";
+    }
+
+    let stimuli = "colormap";
+    if (params.has("stimuli")) {
+      stimuli = normalizeStimuli(params.get("stimuli"));
+    }
+    localStorage.setItem("stimuliMode", stimuli);
+
+    function normalizeTaskSequence(value) {
+      const raw = (value || "").trim().toLowerCase();
+      if (raw === "ts" || raw === "st" || raw === "tt" || raw === "ss") return raw;
+      return "ts";
+    }
+
+    let taskSequence = "ts";
+    if (params.has("task")) {
+      taskSequence = normalizeTaskSequence(params.get("task"));
+    } else {
+      taskSequence = normalizeTaskSequence(localStorage.getItem("taskSequence") || "ts");
+    }
+    localStorage.setItem("taskSequence", taskSequence);
+
     function normalizeExposureMode(value) {
       const raw = (value || "").trim().toLowerCase();
       if (raw === "constant-time" || raw === "constant_time" || raw === "constant") return "constant-time";
@@ -73,6 +99,8 @@
 
     console.log("Participant ID: " + participantId);
     console.log("Attention: " + attention);
+    console.log("Stimuli: " + stimuli);
+    console.log("Task sequence: " + taskSequence);
     console.log("Exposure mode: " + exposureMode);
     console.log("Skip practice: " + skipPractice);
 
@@ -85,7 +113,7 @@
       });
     }
   </script>
-  <script type="module" src="{{ url_for('static', filename='main.js', v='20260223e') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='main.js', v='20260316g') }}"></script>
 </body>
 
 </html>

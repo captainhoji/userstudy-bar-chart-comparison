@@ -109,6 +109,55 @@ body.verification-page #title {
     z-index: 1;
 }
 
+/* Linechart stimuli are full composed images, so do not crop their container. */
+.linechart-wrapper {
+    position: relative;
+    overflow: visible;
+    height: auto;
+    z-index: 1;
+}
+
+/* Relax fixed sizing constraints that were tuned for heatmaps only. */
+.linechart-row {
+    max-width: 100%;
+    /* Reserve a stable plot area width/height so the dual-task layout
+       stays fixed while charts appear/disappear between trials. */
+    width: clamp(520px, 58vw, 760px);
+    min-width: clamp(520px, 58vw, 760px);
+    min-height: clamp(320px, 45vh, 460px);
+}
+
+/* Make only the statement line larger; keep key-instruction line unchanged. */
+.linechart-statement-text {
+    font-size: 1.28em;
+    font-weight: 400;
+}
+
+.linechart-response-hints {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #111;
+}
+
+.linechart-stimulus-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.linechart-key-hints {
+    width: min(360px, 70%);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111;
+}
+
 .legend-column {
     position: relative;
     z-index: 2;

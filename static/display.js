@@ -10,11 +10,23 @@ let layoutCache = {
   rowEl: null
 };
 
-function ensureLayout(attention) {
+function getTaskPrompt(stimuliMode = 'colormap') {
+  if (stimuliMode === 'barchart') {
+    return 'You will see two bar charts. Use the left or right arrow key to choose the correct chart.';
+  }
+  if (stimuliMode === 'linechart') {
+    return 'Across categories, are values higher early (left) or late (right)?<br>Respond with the left or right arrow key.';
+  }
+  return 'Are there more animals early (left) or late (right) in the day?<br>Respond with the left or right arrow key.';
+}
+
+function ensureLayout(attention, stimuliMode = 'colormap') {
   const container = document.getElementById('chart-container');
   container.style.display = 'flex';
 
   if (layoutCache.experimentPanel && layoutCache.attention === attention) {
+    // Keep existing instruction text while layout is reused.
+    // (In linechart mode we control text per-trial in displayHeatmapTrial.)
     return layoutCache;
   }
 
@@ -67,7 +79,7 @@ function ensureLayout(attention) {
   const instructionEl = document.createElement('p');
   instructionEl.id = 'controls-instruction';
   instructionEl.className = 'colormap-instruction';
-  instructionEl.innerHTML = 'Are there more animals early (left) or late (right) in the day?<br>Respond with the left or right arrow key.';
+  instructionEl.innerHTML = getTaskPrompt(stimuliMode);
 
   const feedbackEl = document.createElement('div');
   feedbackEl.id = 'colormap-feedback';
@@ -92,14 +104,20 @@ export function getPhoneScreen() {
   return layoutCache.phoneScreen;
 }
 
-export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
-  const { rowEl, feedbackEl } = ensureLayout(attention);
+export function displayBlankScreen({ duration, attention = 'dual', stimuliMode = 'colormap', onDone }) {
+  const { rowEl, feedbackEl, instructionEl } = ensureLayout(attention, stimuliMode);
   if (rowEl) {
-    rowEl.className = 'colormap-row colormap-placeholder';
+    // Keep the same row footprint during blank intervals so the phone panel
+    // does not shift horizontally between trials in linechart mode.
+    rowEl.className = (stimuliMode === 'linechart' || stimuliMode === 'barchart')
+      ? 'colormap-row linechart-row colormap-placeholder'
+      : 'colormap-row colormap-placeholder';
     rowEl.style.opacity = '1';
     rowEl.innerHTML = '';
   }
   if (feedbackEl) feedbackEl.textContent = '';
+  // In linechart mode, keep the in-between-trial period text-free.
+  if (instructionEl && (stimuliMode === 'linechart' || stimuliMode === 'barchart')) instructionEl.innerHTML = '';
 
   setTimeout(() => {
     if (typeof onDone === 'function') onDone();
@@ -107,42 +125,96 @@ export function displayBlankScreen({ duration, attention = 'dual', onDone }) {
 }
 
 export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual', onDisplayed = null }) {
-  const { rowEl, feedbackEl } = ensureLayout(attention);
+  const mode = (trial?.type === 'linechart' || trial?.type === 'barchart') ? trial.type : 'colormap';
+  const { rowEl, feedbackEl, instructionEl } = ensureLayout(attention, mode);
   if (!rowEl) return;
   const scaleValue = Number(scale) > 0 ? Number(scale) : 1;
   const maxWidthVw = 60 * scaleValue;
   const maxHeightVh = 70 * scaleValue;
 
   if (feedbackEl) feedbackEl.textContent = '';
+  // Update prompt text per-trial in linechart mode (statement verification task).
+  if (instructionEl && (trial?.type === 'linechart' || trial?.type === 'barchart') && trial?.statementText) {
+    const a = trial?.categoryA || '';
+    const b = trial?.categoryB || '';
+    let statementHtml = trial.statementText || '';
+    // Swap generic "value" wording with the chart's y-label (e.g., Views, Streams).
+    if (trial?.yLabel) {
+      const yWord = trial.yLabel.toLowerCase();
+      statementHtml = statementHtml.replace(/\boverall value\b/gi, `overall ${yWord}`);
+      statementHtml = statementHtml.replace(/\bvalue\b/gi, yWord);
+    }
+    if (a) {
+      statementHtml = statementHtml.replace(new RegExp(`\\b${a}\\b`, 'g'), `<b>${a}</b>`);
+    }
+    if (b) {
+      statementHtml = statementHtml.replace(new RegExp(`\\b${b}\\b`, 'g'), `<b>${b}</b>`);
+    }
+    const responseHintHtml = trial?.type === 'barchart'
+      ? 'Respond with the left or right arrow key.'
+      : '(False) ← &nbsp;&nbsp;&nbsp;&nbsp; → (True)';
+    instructionEl.innerHTML = `
+      <span class="linechart-statement-text">${statementHtml}</span><br>
+      <span class="linechart-response-hints">${responseHintHtml}</span>
+    `;
+  } else if (instructionEl) {
+    instructionEl.innerHTML = getTaskPrompt('colormap');
+  }
 
-  rowEl.className = 'colormap-row colormap-loading';
+  rowEl.className = (trial?.type === 'linechart' || trial?.type === 'barchart')
+    ? 'colormap-row linechart-row colormap-loading'
+    : 'colormap-row colormap-loading';
   rowEl.style.opacity = '0';
-  rowEl.innerHTML = `
-    <div class="heatmap-wrapper" style="
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">
-      <img
-        id="heatmap-image"
-        alt="heatmap"
-        style="max-width: ${maxWidthVw}vw; max-height: ${maxHeightVh}vh; object-fit: contain; display: block;"
-      />
-    </div>
-    <div class="legend-column" style="
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    ">
-      <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
-      <img
-        id="legend-image"
-        alt="legend"
-        class="legend-image"
-      />
-      <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
-    </div>
-  `;
+  // Line-chart stimuli are pre-composed PNGs (chart + legend in one image).
+  if (trial?.type === 'linechart' || trial?.type === 'barchart') {
+    // Linechart images include axes + legend, so we give them a larger box
+    // and avoid the fixed-height clipping used by heatmaps.
+    // Show linechart stimuli smaller than before (~40% reduction).
+    const linechartMaxWidthVw = 43.2 * scaleValue;
+    const linechartMaxHeightVh = 49.2 * scaleValue;
+    rowEl.innerHTML = `
+      <div class="linechart-stimulus-column">
+        <div class="linechart-wrapper" style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <img
+            id="heatmap-image"
+            alt="linechart stimulus"
+            style="max-width: ${linechartMaxWidthVw}vw; max-height: ${linechartMaxHeightVh}vh; object-fit: contain; display: block;"
+          />
+        </div>
+      </div>
+    `;
+  } else {
+    rowEl.innerHTML = `
+      <div class="heatmap-wrapper" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <img
+          id="heatmap-image"
+          alt="heatmap"
+          style="max-width: ${maxWidthVw}vw; max-height: ${maxHeightVh}vh; object-fit: contain; display: block;"
+        />
+      </div>
+      <div class="legend-column" style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      ">
+        <div class="legend-label legend-label-top">${trial.legendLabelTop}</div>
+        <img
+          id="legend-image"
+          alt="legend"
+          class="legend-image"
+        />
+        <div class="legend-label legend-label-bottom">${trial.legendLabelBottom}</div>
+      </div>
+    `;
+  }
 
   const heatmapEl = rowEl.querySelector('#heatmap-image');
   const legendEl = rowEl.querySelector('#legend-image');
@@ -171,7 +243,9 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual', onDi
   function maybeShow() {
     if (heatmapReady && legendReady && rowEl && !shown) {
       shown = true;
-      applyLegendSizing();
+      if (trial?.type !== 'linechart') {
+        applyLegendSizing();
+      }
       rowEl.style.opacity = '1';
       startTimer();
       if (typeof onDisplayed === 'function') onDisplayed();
@@ -182,11 +256,17 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual', onDi
     heatmapReady = true;
     maybeShow();
   };
-  legendEl.onload = () => {
+  if (legendEl) {
+    legendEl.onload = () => {
+      legendReady = true;
+      maybeShow();
+    };
+  } else {
     legendReady = true;
-    maybeShow();
-  };
+  }
 
   heatmapEl.src = trial.heatmapSrc;
-  legendEl.src = trial.legendSrc;
+  if (legendEl && trial.legendSrc) {
+    legendEl.src = trial.legendSrc;
+  }
 }

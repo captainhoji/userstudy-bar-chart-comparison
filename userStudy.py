@@ -67,11 +67,10 @@ def prolific_id():
             conn.commit()
             conn.close()
             print(f"Participant '{participant_id}' added.")
-            task_kwargs = {'participant_id': participant_id}
-            for key in ('attention', 'exposure', 'skip_practice'):
-                val = request.args.get(key)
-                if val is not None:
-                    task_kwargs[key] = val
+            # Keep all URL arguments intact from entry link -> task page.
+            # This avoids silently dropping newer parameters when we add them.
+            task_kwargs = dict(request.args.items())
+            task_kwargs['participant_id'] = participant_id
             return redirect(url_for('task', **task_kwargs))
             # return render_template('survey.html', participant_id=participant_id)
         else:
@@ -217,37 +216,101 @@ def save_phone_summary():
 @app.route('/save_response', methods=['POST'])
 def save_response():
     data = request.get_json()
-    fields = [
-        "participant_id",
-        "response_time",
-        "correct",
-        "trial_number",
-        "stimuli_number",
-        "response",
-        "heatmap_condition",
-        "legend_condition",
-        "label_condition",
-        "attention",
-        "time_when"
-    ]
-    values = [
-        data.get("participant_id"),
-        data.get("response_time"),
-        data.get("correct"),
-        data.get("trial_number"),
-        data.get("stimuli_number"),
-        data.get("response"),
-        data.get("heatmap_condition"),
-        data.get("legend_condition"),
-        data.get("label_condition"),
-        data.get("attention"),
-        data.get("time_when")
-    ]
+    trial_type = (data.get("trial_type") or "heatmap").lower()
+    if trial_type == "linechart":
+        fields = [
+            "participant_id",
+            "response_time",
+            "correct",
+            "trial_number",
+            "stimuli_number",
+            "response",
+            "slope",
+            "legend",
+            "statement_type",
+            "statement_truth",
+            "comparison_frame",
+            "attention",
+            "time_when"
+        ]
+        values = [
+            data.get("participant_id"),
+            data.get("response_time"),
+            data.get("correct"),
+            data.get("trial_number"),
+            data.get("stimuli_number"),
+            data.get("response"),
+            data.get("heatmap_condition"),
+            data.get("legend_condition"),
+            data.get("statement_type"),
+            data.get("statement_truth"),
+            data.get("comparison_frame"),
+            data.get("attention"),
+            data.get("time_when")
+        ]
+        # Bar-chart mode uses the same payload schema for now.
+        table_name = "Trial_linechart"
+    elif trial_type == "barchart":
+        fields = [
+            "participant_id",
+            "response_time",
+            "correct",
+            "trial_number",
+            "stimuli_number",
+            "response",
+            "task",
+            "color",
+            "attention",
+            "time_when"
+        ]
+        values = [
+            data.get("participant_id"),
+            data.get("response_time"),
+            data.get("correct"),
+            data.get("trial_number"),
+            data.get("stimuli_number"),
+            data.get("response"),
+            # Frontend currently sends statement_type for barchart task.
+            data.get("task") or data.get("statement_type"),
+            # Frontend currently sends legend_condition for barchart color condition.
+            data.get("color") or data.get("legend_condition"),
+            data.get("attention"),
+            data.get("time_when")
+        ]
+        table_name = "Trial_barchart"
+    else:
+        fields = [
+            "participant_id",
+            "response_time",
+            "correct",
+            "trial_number",
+            "stimuli_number",
+            "response",
+            "heatmap_condition",
+            "legend_condition",
+            "label_condition",
+            "attention",
+            "time_when"
+        ]
+        values = [
+            data.get("participant_id"),
+            data.get("response_time"),
+            data.get("correct"),
+            data.get("trial_number"),
+            data.get("stimuli_number"),
+            data.get("response"),
+            data.get("heatmap_condition"),
+            data.get("legend_condition"),
+            data.get("label_condition"),
+            data.get("attention"),
+            data.get("time_when")
+        ]
+        table_name = "Trial_heatmap"
 
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
-        insert_row(cursor, "Trial_heatmap", fields, values)
+        insert_row(cursor, table_name, fields, values)
         conn.commit()
         conn.close()
         return jsonify({'message': 'Response saved successfully'}), 200
@@ -263,38 +326,98 @@ def save_responses_batch():
     if not isinstance(responses, list) or len(responses) == 0:
         return jsonify({'message': 'No responses provided'}), 400
 
-    fields = [
-        "participant_id",
-        "response_time",
-        "correct",
-        "trial_number",
-        "stimuli_number",
-        "response",
-        "heatmap_condition",
-        "legend_condition",
-        "label_condition",
-        "attention",
-        "time_when"
-    ]
-
     conn = get_db_connection()
     if conn:
         cursor = conn.cursor()
         for row in responses:
-            values = [
-                row.get("participant_id"),
-                row.get("response_time"),
-                row.get("correct"),
-                row.get("trial_number"),
-                row.get("stimuli_number"),
-                row.get("response"),
-                row.get("heatmap_condition"),
-                row.get("legend_condition"),
-                row.get("label_condition"),
-                row.get("attention"),
-                row.get("time_when")
-            ]
-            insert_row(cursor, "Trial_heatmap", fields, values)
+            trial_type = (row.get("trial_type") or "heatmap").lower()
+            if trial_type == "linechart":
+                fields = [
+                    "participant_id",
+                    "response_time",
+                    "correct",
+                    "trial_number",
+                    "stimuli_number",
+                    "response",
+                    "slope",
+                    "legend",
+                    "statement_type",
+                    "statement_truth",
+                    "comparison_frame",
+                    "attention",
+                    "time_when"
+                ]
+                values = [
+                    row.get("participant_id"),
+                    row.get("response_time"),
+                    row.get("correct"),
+                    row.get("trial_number"),
+                    row.get("stimuli_number"),
+                    row.get("response"),
+                    row.get("heatmap_condition"),
+                    row.get("legend_condition"),
+                    row.get("statement_type"),
+                    row.get("statement_truth"),
+                    row.get("comparison_frame"),
+                    row.get("attention"),
+                    row.get("time_when")
+                ]
+                table_name = "Trial_linechart"
+            elif trial_type == "barchart":
+                fields = [
+                    "participant_id",
+                    "response_time",
+                    "correct",
+                    "trial_number",
+                    "stimuli_number",
+                    "response",
+                    "task",
+                    "color",
+                    "attention",
+                    "time_when"
+                ]
+                values = [
+                    row.get("participant_id"),
+                    row.get("response_time"),
+                    row.get("correct"),
+                    row.get("trial_number"),
+                    row.get("stimuli_number"),
+                    row.get("response"),
+                    row.get("task") or row.get("statement_type"),
+                    row.get("color") or row.get("legend_condition"),
+                    row.get("attention"),
+                    row.get("time_when")
+                ]
+                table_name = "Trial_barchart"
+            else:
+                fields = [
+                    "participant_id",
+                    "response_time",
+                    "correct",
+                    "trial_number",
+                    "stimuli_number",
+                    "response",
+                    "heatmap_condition",
+                    "legend_condition",
+                    "label_condition",
+                    "attention",
+                    "time_when"
+                ]
+                values = [
+                    row.get("participant_id"),
+                    row.get("response_time"),
+                    row.get("correct"),
+                    row.get("trial_number"),
+                    row.get("stimuli_number"),
+                    row.get("response"),
+                    row.get("heatmap_condition"),
+                    row.get("legend_condition"),
+                    row.get("label_condition"),
+                    row.get("attention"),
+                    row.get("time_when")
+                ]
+                table_name = "Trial_heatmap"
+            insert_row(cursor, table_name, fields, values)
         conn.commit()
         conn.close()
         return jsonify({'message': 'Responses saved successfully', 'count': len(responses)}), 200

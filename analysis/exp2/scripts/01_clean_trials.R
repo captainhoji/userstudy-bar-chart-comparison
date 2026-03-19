@@ -67,16 +67,33 @@ heatmap <- readr::read_csv(cfg$raw_trial_heatmap, show_col_types = FALSE) %>%
     label_condition = as.character(label_condition)
   ) %>%
   mutate(
+    # Recode label_condition values to requested names for all downstream outputs.
+    label_condition = dplyr::case_when(
+      label_condition == "greater-up" ~ "high-more",
+      label_condition == "fewer-up" ~ "low-more",
+      TRUE ~ label_condition
+    )
+  ) %>%
+  mutate(
     lightness_mapping = dplyr::case_when(
-      (legend_condition == "dark-up" & label_condition == "greater-up") |
-        (legend_condition == "light-up" & label_condition == "fewer-up") ~ "dark-more",
-      (legend_condition == "dark-up" & label_condition == "fewer-up") |
-        (legend_condition == "light-up" & label_condition == "greater-up") ~ "light-more",
+      (legend_condition == "dark-up" & label_condition == "high-more") |
+        (legend_condition == "light-up" & label_condition == "low-more") ~ "dark-more",
+      (legend_condition == "dark-up" & label_condition == "low-more") |
+        (legend_condition == "light-up" & label_condition == "high-more") ~ "light-more",
       TRUE ~ NA_character_
     )
   ) %>%
   filter(!is.na(participant_id)) %>%
   mutate(
+    # Trial-level unanswered flag for flexible downstream analyses.
+    unanswered = dplyr::if_else(response == "none", 1, 0),
+    # Trial-level response-direction recode requested by user.
+    # "right" if (response == right & correct == 1) OR (response == left & correct == 0), else "left".
+    answer_direction = dplyr::if_else(
+      (response == "right" & correct == 1) | (response == "left" & correct == 0),
+      "right",
+      "left"
+    ),
     response_time = dplyr::if_else(!is.na(response_time) & response_time >= 0, response_time, NA_real_),
     duration = dplyr::if_else(!is.na(duration) & duration >= 0, duration, NA_real_)
   )
@@ -99,8 +116,8 @@ heatmap <- heatmap %>%
       TRUE ~ NA_real_
     ),
     label_condition_c = dplyr::case_when(
-      label_condition == "fewer-up" ~ -0.5,
-      label_condition == "greater-up" ~ 0.5,
+      label_condition == "low-more" ~ -0.5,
+      label_condition == "high-more" ~ 0.5,
       TRUE ~ NA_real_
     ),
     lightness_mapping_c = dplyr::case_when(
@@ -191,9 +208,11 @@ participant_summary <- heatmap %>%
     d_prime_ci_low = dplyr::if_else(has_dual_trials, d_prime_ci_low, NA_real_),
     d_prime_ci_high = dplyr::if_else(has_dual_trials, d_prime_ci_high, NA_real_),
     d_prime_ci_excludes_zero = dplyr::if_else(has_dual_trials, d_prime_ci_excludes_zero, NA),
+    # New exclusion rule: participants must have exactly 80 colormap trials.
+    tier1_exclude_incomplete_trials = n_colormap_trials != 80,
     tier1_exclude_low_phone_sdt = has_dual_trials & !dplyr::coalesce(d_prime_ci_excludes_zero, FALSE),
     tier1_exclude_low_heatmap_accuracy = dplyr::coalesce(heatmap_accuracy < tier1_accuracy_threshold, FALSE),
-    exclude_tier1 = tier1_exclude_low_phone_sdt | tier1_exclude_low_heatmap_accuracy
+    exclude_tier1 = tier1_exclude_incomplete_trials | tier1_exclude_low_phone_sdt | tier1_exclude_low_heatmap_accuracy
   )
 
 rt_mean_of_means <- mean(participant_summary$mean_rt, na.rm = TRUE)
@@ -251,6 +270,7 @@ heatmap <- heatmap %>%
         d_prime_ci_low,
         d_prime_ci_high,
         d_prime_ci_excludes_zero,
+        tier1_exclude_incomplete_trials,
         tier1_exclude_low_phone_sdt,
         tier1_exclude_low_heatmap_accuracy,
         exclude_tier1,
@@ -270,6 +290,7 @@ exclusion_summary <- participant_summary %>%
   mutate(
     exclusion_reason = stringr::str_trim(
       paste(
+        ifelse(tier1_exclude_incomplete_trials, "incomplete_trials_not_equal_80", ""),
         ifelse(tier1_exclude_low_phone_sdt, "phone_dprime_ci_includes_0", ""),
         ifelse(tier1_exclude_low_heatmap_accuracy, "low_heatmap_accuracy_below_49.5_of_80", "")
       )
@@ -290,6 +311,7 @@ exclusion_summary <- participant_summary %>%
     d_prime_ci_low,
     d_prime_ci_high,
     d_prime_ci_excludes_zero,
+    tier1_exclude_incomplete_trials,
     tier1_exclude_low_phone_sdt,
     tier1_exclude_low_heatmap_accuracy,
     excluded,

@@ -71,6 +71,7 @@ export function saveResponseToServer({
   participantId,
   response,
   correct,
+  trialType,
   trialNumber,
   timeWhen,
   stimuliNumber,
@@ -78,13 +79,19 @@ export function saveResponseToServer({
   heatmapCondition,
   legendCondition,
   labelCondition,
-  attention
+  attention,
+  task,
+  color,
+  statementType,
+  statementTruth,
+  comparisonFrame
 }) {
   responseQueue.push({
     payload: {
       participant_id: participantId,
       response,
       correct,
+      trial_type: trialType || 'heatmap',
       trial_number: trialNumber,
       time_when: timeWhen,
       stimuli_number: stimuliNumber,
@@ -92,7 +99,13 @@ export function saveResponseToServer({
       heatmap_condition: heatmapCondition,
       legend_condition: legendCondition,
       label_condition: labelCondition,
-      attention
+      attention,
+      // Bar-chart mode fields (backend maps these into Trial_barchart.task/color).
+      task: task || null,
+      color: color || null,
+      statement_type: statementType || null,
+      statement_truth: statementTruth ?? null,
+      comparison_frame: comparisonFrame || null
     },
     attempts: 0,
     nextTryAt: 0

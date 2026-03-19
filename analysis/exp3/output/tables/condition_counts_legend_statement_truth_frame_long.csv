@@ -1,0 +1,17 @@
+legend,statement_type,statement_truth,comparison_frame,n_trials
+ordered,main_effect,false,more,2
+ordered,main_effect,false,less,2
+shuffled,main_effect,false,more,1
+shuffled,main_effect,false,less,1
+ordered,main_effect,true,more,2
+ordered,main_effect,true,less,2
+shuffled,main_effect,true,more,2
+shuffled,main_effect,true,less,4
+ordered,interaction,false,more,2
+ordered,interaction,false,less,2
+shuffled,interaction,false,more,4
+shuffled,interaction,false,less,2
+ordered,interaction,true,more,3
+ordered,interaction,true,less,1
+shuffled,interaction,true,more,0
+shuffled,interaction,true,less,2

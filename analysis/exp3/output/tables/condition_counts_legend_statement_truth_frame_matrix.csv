@@ -1,0 +1,5 @@
+statement_type,statement_truth,ordered | more,ordered | less,shuffled | more,shuffled | less
+main_effect,false,2,2,1,1
+main_effect,true,2,2,2,4
+interaction,false,2,2,4,2
+interaction,true,3,1,0,2

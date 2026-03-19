@@ -34,6 +34,7 @@ export function loadTrial() {
   displayBlankScreen({
     duration: itiMs,
     attention: config.currentAttention || config.attention,
+    stimuliMode: config.stimuliMode || 'colormap',
     onDone: () => {
       if (typeof config.onPhoneScreenReady === 'function') config.onPhoneScreenReady();
       displayHeatmapTrial({
@@ -81,8 +82,9 @@ async function handleResponse(response) {
       constantExposureTimerId = null;
     }
     const duration = Math.max(0, Math.round((performance.now() - (trialStartTs || performance.now()))));
+    // For line-chart stimuli we store the answer directly as correctSide.
     const darkerSide = trialData.heatmapCondition === 'left-dark' ? 'left' : 'right';
-    const correctSide = trialData.greaterIsDark ? darkerSide : (darkerSide === 'left' ? 'right' : 'left');
+    const correctSide = trialData.correctSide || (trialData.greaterIsDark ? darkerSide : (darkerSide === 'left' ? 'right' : 'left'));
     const isCorrect = response === correctSide;
     console.log(`trial ${config.trialCounter + 1} correctness: ${isCorrect ? 'correct' : 'incorrect'} (constant-time)`);
     const feedbackEl = document.getElementById('colormap-feedback');
@@ -104,8 +106,9 @@ async function handleResponse(response) {
   const duration = stopTimer();
   isStimulusDisplayed = false;
 
+  // For line-chart stimuli we store the answer directly as correctSide.
   const darkerSide = trialData.heatmapCondition === 'left-dark' ? 'left' : 'right';
-  const correctSide = trialData.greaterIsDark ? darkerSide : (darkerSide === 'left' ? 'right' : 'left');
+  const correctSide = trialData.correctSide || (trialData.greaterIsDark ? darkerSide : (darkerSide === 'left' ? 'right' : 'left'));
   const isCorrect = response === correctSide;
   console.log(`trial ${config.trialCounter + 1} correctness: ${isCorrect ? 'correct' : 'incorrect'}`);
 
@@ -152,6 +155,7 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
         participantId,
         response,
         correct: didAnswer ? (isCorrect ? 1 : 0) : 0,
+        trialType: trialData.type || 'heatmap',
         trialNumber: config.trialCounter,
         timeWhen: now,
         stimuliNumber: trialData.heatmapId,
@@ -159,7 +163,13 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
         heatmapCondition: trialData.heatmapCondition,
         legendCondition: trialData.legendCondition,
         labelCondition: trialData.labelCondition,
-        attention: config.currentAttention || config.attention
+        attention: config.currentAttention || config.attention,
+        // Explicit bar-chart payload fields.
+        task: trialData.taskLabel || null,
+        color: trialData.legendCondition || null,
+        statementType: trialData.statementType,
+        statementTruth: trialData.statementTruth,
+        comparisonFrame: trialData.comparisonFrame || null
       });
     }
   }
@@ -167,12 +177,15 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
   if (config.exposureMode === 'constant-time') {
     const rowEl = document.querySelector('.colormap-row');
     if (rowEl) {
-      rowEl.className = 'colormap-row colormap-placeholder';
+      const isWideStimulus = trialData?.type === 'linechart' || trialData?.type === 'barchart';
+      rowEl.className = isWideStimulus
+        ? 'colormap-row linechart-row colormap-placeholder'
+        : 'colormap-row colormap-placeholder';
       rowEl.style.opacity = '1';
       rowEl.innerHTML = '';
     }
     if (showTooSlowFeedback && feedbackEl) {
-      feedbackEl.innerHTML = '<span class="colormap-feedback-too-slow">Timeout</span>';
+      feedbackEl.innerHTML = '<span class="colormap-feedback-too-slow">Too slow</span>';
       window.setTimeout(() => {
         feedbackEl.textContent = '';
         if (typeof onNext === 'function') onNext();
@@ -189,7 +202,10 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
     setTimeout(() => {
       const rowEl = document.querySelector('.colormap-row');
       if (rowEl) {
-        rowEl.className = 'colormap-row colormap-placeholder';
+        const isWideStimulus = trialData?.type === 'linechart' || trialData?.type === 'barchart';
+        rowEl.className = isWideStimulus
+          ? 'colormap-row linechart-row colormap-placeholder'
+          : 'colormap-row colormap-placeholder';
         rowEl.style.opacity = '1';
         rowEl.innerHTML = '';
       }
