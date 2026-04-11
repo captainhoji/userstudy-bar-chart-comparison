@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
 })
 
 project_root <- normalizePath(".", winslash = "/", mustWork = TRUE)
-clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.csv")
+clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.rds")
 participant_summary_file <- file.path(project_root, "output", "tables", "participant_summary.csv")
 report_dir <- file.path(project_root, "output", "reports")
 report_file <- file.path(report_dir, "data_summary.md")
@@ -15,7 +15,7 @@ if (!file.exists(clean_file) || !file.exists(participant_summary_file)) {
   stop("Run scripts/01_clean_trial_barchart.R first.")
 }
 
-clean_trials <- readr::read_csv(clean_file, show_col_types = FALSE)
+clean_trials <- readRDS(clean_file)
 participant_summary <- readr::read_csv(participant_summary_file, show_col_types = FALSE)
 
 # Restrict the main summaries to complete non-test participants so the report
@@ -50,12 +50,21 @@ participant_quality <- participant_summary %>%
     participants_with_phone_data = sum(has_phone_data, na.rm = TRUE),
     participants_failing_phone_dprime = sum(exclude_low_phone_dprime, na.rm = TRUE),
     participants_failing_task_accuracy = sum(exclude_low_task_accuracy, na.rm = TRUE),
+    participants_failing_mean_rt = sum(exclude_mean_rt_participant_2sd, na.rm = TRUE),
     .groups = "drop"
   )
 
+rt_outlier_trials_within_participant <- clean_trials %>%
+  summarise(n_trials = sum(exclude_rt_trial_2sd_within_participant, na.rm = TRUE)) %>%
+  pull(n_trials)
+
+trials_over_5s <- clean_trials %>%
+  summarise(n_trials = sum(rt_over_5s, na.rm = TRUE)) %>%
+  pull(n_trials)
+
 mean_accuracy <- analysis_trials %>%
   filter(valid_correct, is_answered) %>%
-  summarise(value = round(mean(correct), 3)) %>%
+  summarise(value = round(mean(accuracy_scored), 3)) %>%
   pull(value)
 
 mean_rt <- analysis_trials %>%
@@ -79,6 +88,9 @@ report_lines <- c(
   paste0("- Participants with overlapping phone data: ", participant_quality$participants_with_phone_data),
   paste0("- Participants failing phone d' exclusion: ", participant_quality$participants_failing_phone_dprime),
   paste0("- Participants failing task accuracy exclusion: ", participant_quality$participants_failing_task_accuracy),
+  paste0("- Participants failing mean RT exclusion: ", participant_quality$participants_failing_mean_rt),
+  paste0("- Trials flagged by within-participant RT exclusion: ", rt_outlier_trials_within_participant),
+  paste0("- Trials over 5000 ms: ", trials_over_5s),
   "",
   "## Starting task",
   "",

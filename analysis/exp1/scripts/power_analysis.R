@@ -24,8 +24,7 @@ heatmap_filtered <- heatmap %>%
   filter(participant_id %in% eligible_ids)
 
 heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, scale = FALSE)[, 1]
-
-m1_all_blocks <- glmer(
+m1_all_blocks_acc <- glmer(
   correct ~ label_condition_c*lightness_mapping_c*attention_c
   + (1 + label_condition_c*lightness_mapping_c | participant_id),
   data = heatmap_filtered,
@@ -36,14 +35,49 @@ m1_all_blocks <- glmer(
     )
 )
 
-m1_all_blocks <- lmer(
+m1_all_blocks_acc_single <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c
+  + (1 + label_condition_c*lightness_mapping_c || participant_id),
+  data = heatmap_filtered %>% filter(attention=="single"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+
+m1_all_blocks_acc_dual <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c
+  + (1 + label_condition_c*lightness_mapping_c || participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+
+m1_all_blocks_acc_dual_high <- glmer(
+  correct ~ lightness_mapping_c
+  + (1 + lightness_mapping_c || participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual", label_condition=="greater-up"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+
+m1_all_blocks_rt <- lmer(
   duration ~ label_condition_c*lightness_mapping_c*attention_c +
     (1 + label_condition_c + lightness_mapping_c || participant_id),
   data = heatmap_filtered
   # control = lmerControl(optimizer = "bobyqa")
 )
+summary(m1_all_blocks_acc)
+summary(m1_all_blocks_acc_single)
+summary(m1_all_blocks_acc_dual)
+summary(m1_all_blocks_acc_dual_high)
 
-summary(m1_all_blocks)
+summary(m1_all_blocks_rt)
+
 
 if (!require("devtools")) {
   install.packages("devtools", dependencies = TRUE)}

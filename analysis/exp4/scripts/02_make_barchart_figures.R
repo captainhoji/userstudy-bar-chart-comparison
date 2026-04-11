@@ -5,7 +5,7 @@ suppressPackageStartupMessages({
 })
 
 project_root <- normalizePath(".", winslash = "/", mustWork = TRUE)
-clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.csv")
+clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.rds")
 participant_summary_file <- file.path(project_root, "output", "tables", "participant_summary.csv")
 figure_dir <- file.path(project_root, "output", "figures")
 
@@ -19,37 +19,16 @@ if (!file.exists(clean_file) || !file.exists(participant_summary_file)) {
 use_exclude_incomplete_participants <- TRUE
 use_exclude_low_task_accuracy <- TRUE
 use_exclude_low_phone_dprime <- TRUE
+use_exclude_low_task_accuracy_for_rt <- TRUE
+use_exclude_mean_rt_participant_2sd_for_rt <- FALSE
+use_exclude_rt_trial_2sd_within_participant_for_rt <- FALSE
 manual_exclude_participant_ids <- character(0)
 
-clean_trials <- readr::read_csv(clean_file, show_col_types = FALSE) %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    task = factor(task, levels = c("tallest", "shortest")),
-    color = factor(color, levels = c("same", "double", "random")),
-    response = factor(response, levels = c("left", "right", "none")),
-    trial_number = as.integer(trial_number),
-    block = case_when(
-      !is.na(trial_number) & trial_number < 24 ~ "block_1",
-      !is.na(trial_number) & trial_number < 48 ~ "block_2",
-      !is.na(trial_number) & trial_number < 72 ~ "block_3",
-      !is.na(trial_number) ~ "block_4",
-      TRUE ~ NA_character_
-    ),
-    block_half = case_when(
-      block %in% c("block_1", "block_2") ~ "first_2_blocks",
-      block %in% c("block_3", "block_4") ~ "last_2_blocks",
-      TRUE ~ NA_character_
-    ),
-    block_pair = case_when(
-      block %in% c("block_1", "block_3") ~ "blocks_1_and_3",
-      block %in% c("block_2", "block_4") ~ "blocks_2_and_4",
-      TRUE ~ NA_character_
-    )
-  )
+clean_trials <- readRDS(clean_file)
 
 participant_summary <- readr::read_csv(participant_summary_file, show_col_types = FALSE)
 
-eligible_participants <- participant_summary %>%
+eligible_participants_accuracy <- participant_summary %>%
   filter(
     if (use_exclude_incomplete_participants) is_complete else TRUE,
     if (use_exclude_low_task_accuracy) !exclude_low_task_accuracy else TRUE,
@@ -58,11 +37,21 @@ eligible_participants <- participant_summary %>%
   ) %>%
   pull(participant_id)
 
+eligible_participants_rt <- participant_summary %>%
+  filter(
+    if (use_exclude_incomplete_participants) is_complete else TRUE,
+    if (use_exclude_low_phone_dprime) !exclude_low_phone_dprime else TRUE,
+    if (use_exclude_low_task_accuracy_for_rt) !exclude_low_task_accuracy else TRUE,
+    if (use_exclude_mean_rt_participant_2sd_for_rt) !exclude_mean_rt_participant_2sd else TRUE,
+    !(participant_id %in% manual_exclude_participant_ids)
+  ) %>%
+  pull(participant_id)
+
 # This palette keeps the condition colors distinct but still fairly print-friendly.
 condition_palette <- c(
-  same = "#4C78A8",
-  double = "#F58518",
-  random = "#54A24B"
+  redundant = "#4C78A8",
+  none = "#F58518",
+  conflict = "#54A24B"
 )
 
 theme_barchart <- theme_minimal(base_size = 12) +
@@ -105,7 +94,7 @@ cousineau_morey_summary <- function(data, value_col, condition_cols) {
 
 analysis_trials <- clean_trials %>%
   filter(
-    participant_id %in% eligible_participants,
+    participant_id %in% eligible_participants_accuracy,
     valid_correct,
     valid_response_time,
     is_answered
@@ -114,15 +103,31 @@ analysis_trials <- clean_trials %>%
 # Accuracy uses all answered trials with valid coding, but RT plots are often
 # easier to interpret when they are limited to correct responses only.
 rt_trials <- analysis_trials %>%
-  filter(correct == 1)
+  filter(
+    participant_id %in% eligible_participants_rt,
+    if (use_exclude_rt_trial_2sd_within_participant_for_rt) !exclude_rt_trial_2sd_within_participant else TRUE,
+    correct == 1,
+    !rt_over_5s
+  )
 
-message("Participants included in figures: ", dplyr::n_distinct(analysis_trials$participant_id))
-message("Participants excluded from figures: ", nrow(participant_summary) - length(eligible_participants))
+
+message("Participants included in accuracy figures: ", dplyr::n_distinct(analysis_trials$participant_id))
+message("Participants included in RT figures: ", dplyr::n_distinct(rt_trials$participant_id))
+message(
+  "Participants excluded from accuracy figures: ",
+  nrow(participant_summary) - length(eligible_participants_accuracy)
+)
+message(
+  "Participants excluded from RT figures: ",
+  nrow(participant_summary) - length(eligible_participants_rt)
+)
 
 make_accuracy_plot <- function(trial_data, plot_title) {
+  # These bar-plot error bars come from participant-normalized
+  # Cousineau-Morey corrected standard errors.
   accuracy_by_condition <- trial_data %>%
     group_by(participant_id, attention, task, color) %>%
-    summarise(accuracy = mean(correct), .groups = "drop") %>%
+    summarise(accuracy = mean(accuracy_scored), .groups = "drop") %>%
     cousineau_morey_summary(
       value_col = "accuracy",
       condition_cols = c("attention", "task", "color")
@@ -154,6 +159,7 @@ make_accuracy_plot <- function(trial_data, plot_title) {
 }
 
 make_rt_bar_plot <- function(trial_data, plot_title) {
+  # These bar-plot error bars also use the same Cousineau-Morey correction.
   rt_by_condition <- trial_data %>%
     group_by(participant_id, attention, task, color) %>%
     summarise(mean_rt_ms = mean(response_time), .groups = "drop") %>%

@@ -140,6 +140,12 @@ function completeTrial({ response, duration, isCorrect, showTooSlowFeedback = fa
     config.practiceDualTotal = (config.practiceDualTotal || 0) + 1;
     if (!didAnswer) config.practiceDualMisses = (config.practiceDualMisses || 0) + 1;
     if (isCorrect) config.practiceDualCorrects = (config.practiceDualCorrects || 0) + 1;
+  } else if (config.currentBlock === 'practice-switch') {
+    // Mid-experiment bar-chart practice should behave like practice:
+    // track accuracy locally, but do not save rows as real data.
+    config.practiceSwitchTotal = (config.practiceSwitchTotal || 0) + 1;
+    if (!didAnswer) config.practiceSwitchMisses = (config.practiceSwitchMisses || 0) + 1;
+    if (isCorrect) config.practiceSwitchCorrects = (config.practiceSwitchCorrects || 0) + 1;
   } else if (config.currentBlock === 'practice') {
     config.practiceTotal = (config.practiceTotal || 0) + 1;
     if (!didAnswer) config.practiceMisses = (config.practiceMisses || 0) + 1;

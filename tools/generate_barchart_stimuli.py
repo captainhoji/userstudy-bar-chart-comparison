@@ -26,10 +26,11 @@ RNG = random.Random(20260311)
 OUT_DIR = Path("static/stimuli/barcharts")
 TRIALS_CSV = OUT_DIR / "barchart_trials.csv"
 
-# Real pool: 32 datasets => 96 stimuli (32 * 3 colors).
-# Practice pool: 4 datasets => 12 stimuli (4 * 3 colors).
-N_REAL_DATASETS = 32
-N_PRACTICE_DATASETS = 4
+# Real pool: 96 underlying datasets. Each dataset is rendered in 3 colors so
+# the frontend can assign exactly one color version per dataset at runtime.
+# Practice pool uses 12 underlying datasets for the 12-practice-trial block.
+N_REAL_DATASETS = 96
+N_PRACTICE_DATASETS = 12
 
 LIGHT_HEX = "#deebf7"
 DARK_HEX = "#08306b"
@@ -150,8 +151,9 @@ def generate_dataset(tallest_side: str, shortest_side: str) -> tuple[list[int], 
 
 def make_random_colors(values: list[int]) -> list[str]:
     """
-    Random color assignment where lightest/darkest colors do not match
-    min/max value bars.
+    Random color assignment where the tallest/shortest bars are not assigned
+    either endpoint lightness. This avoids a misleading "darkest == tallest"
+    or "lightest == shortest" cue in the random condition.
     """
     # Start from value-derived gradient, then permute assignments.
     base_colors = rank_color_map(values)
@@ -168,23 +170,23 @@ def make_random_colors(values: list[int]) -> list[str]:
     for _ in range(200):
         perm = base_colors[:]
         RNG.shuffle(perm)
-        if perm[min_idx] == lightest:
+        if perm[min_idx] in {lightest, darkest}:
             continue
-        if perm[max_idx] == darkest:
+        if perm[max_idx] in {lightest, darkest}:
             continue
         return perm
 
     # Fallback: swap away violating endpoints.
     perm = base_colors[:]
     RNG.shuffle(perm)
-    if perm[min_idx] == lightest:
+    if perm[min_idx] in {lightest, darkest}:
         for i in range(len(perm)):
-            if i != min_idx and perm[i] != lightest:
+            if i != min_idx and perm[i] not in {lightest, darkest}:
                 perm[min_idx], perm[i] = perm[i], perm[min_idx]
                 break
-    if perm[max_idx] == darkest:
+    if perm[max_idx] in {lightest, darkest}:
         for i in range(len(perm)):
-            if i != max_idx and perm[i] != darkest:
+            if i != max_idx and perm[i] not in {lightest, darkest}:
                 perm[max_idx], perm[i] = perm[i], perm[max_idx]
                 break
     return perm

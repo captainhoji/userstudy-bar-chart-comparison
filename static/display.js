@@ -144,6 +144,11 @@ export function displayHeatmapTrial({ trial, scale = 1, attention = 'dual', onDi
       statementHtml = statementHtml.replace(/\boverall value\b/gi, `overall ${yWord}`);
       statementHtml = statementHtml.replace(/\bvalue\b/gi, yWord);
     }
+    // Emphasize the comparison words so the statement logic is easier to scan.
+    statementHtml = statementHtml.replace(/\bgreater\b/gi, '<b>$&</b>');
+    statementHtml = statementHtml.replace(/\bless\b/gi, '<b>$&</b>');
+    statementHtml = statementHtml.replace(/\bstrongly\b/gi, '<b>$&</b>');
+    statementHtml = statementHtml.replace(/\bslowly\b/gi, '<b>$&</b>');
     if (a) {
       statementHtml = statementHtml.replace(new RegExp(`\\b${a}\\b`, 'g'), `<b>${a}</b>`);
     }

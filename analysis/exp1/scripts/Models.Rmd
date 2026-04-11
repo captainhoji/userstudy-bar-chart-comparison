@@ -6,17 +6,22 @@ library(ggplot2) # For plotting
 library(dplyr)   # For data manipulation
 library(tidyr)   # For reshaping data
 library(lmerTest)
+source(here::here("scripts", "modelSummaryToLatex.R"))
 
 suppressPackageStartupMessages(library(here))
-source(here::here("analysis", "scripts", "00_setup.R"))
+source(here::here("scripts", "00_setup.R"))
 
 if (!file.exists(cfg$out_clean_heatmap)) {
   stop("Run 01_clean_trials.R first.")
 }
-```
 
-```{r}
 heatmap <- readRDS(cfg$out_clean_heatmap)
+
+# Filter out participants who have not completed the experiment - these participants were not paid
+heatmap <- heatmap %>%
+  group_by(participant_id) %>%
+  filter(n() == 80) %>%
+  ungroup()
 
 eligible_ids <- heatmap %>%
   filter(!exclude_tier1) %>%
@@ -27,12 +32,289 @@ heatmap_filtered <- heatmap %>%
   filter(participant_id %in% eligible_ids)
 
 heatmap_filtered$block_c <- scale(heatmap_filtered$block_num, center = TRUE, scale = FALSE)[, 1]
+
+rt_data <- heatmap_filtered %>%
+  filter(correct == 1)
+
 ```
 
-Accuracy with blocks
+Acc models
 ```{r}
-m_acc_wBlock <- glmer(
-  correct ~ label_condition_c*lightness_mapping_c*attention_c*block_c
+m_acc <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c
+  + (1 + label_condition_c*lightness_mapping_c | participant_id),
+  data = heatmap_filtered,
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_acc)
+
+m_acc_single <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c
+  + (1 + label_condition_c + lightness_mapping_c || participant_id),
+  data = heatmap_filtered %>% filter(attention=="single"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_single)
+
+# doesn't converge when I iniclude by-subject slopes
+m_acc_dual <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c
+  + (1 | participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_dual)
+
+m_acc_dual_dark <- glmer(
+  correct ~ label_condition_c
+  + (1 + label_condition_c || participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual", lightness_mapping=="dark-more"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_dual_dark)
+
+m_acc_dual_light <- glmer(
+  correct ~ label_condition_c
+  + (1| participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual", lightness_mapping=="light-more"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_dual_light)
+
+m_acc_dual_high <- glmer(
+  correct ~ lightness_mapping_c
+  + (1 + lightness_mapping_c | participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual", label_condition=="greater-up"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_dual_high)
+
+m_acc_dual_low <- glmer(
+  correct ~ lightness_mapping_c
+  + (1 + lightness_mapping_c | participant_id),
+  data = heatmap_filtered %>% filter(attention=="dual", label_condition=="fewer-up"),
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa"
+  )
+)
+summary(m_acc_dual_low)
+```
+
+RT models
+```{r}
+m_rt <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c*attention_c +
+    (1 + lightness_mapping_c || participant_id),
+  data = rt_data,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt)
+
+# Breakdown within each task
+m_rt_single <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c +
+    (1 | participant_id),
+  data = rt_data %>% filter(attention=="single"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    ))
+summary(m_rt_single)
+
+m_rt_dual <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c +
+    (1 + label_condition_c + lightness_mapping_c || participant_id),
+  data = rt_data %>% filter(attention=="dual"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    ))
+summary(m_rt_dual)
+
+# Breakdown of lightness_mapping:label
+m_rt_dark <- lmer(
+  duration ~ label_condition_c*attention_c
+  + (1 + label_condition_c || participant_id),
+  data = rt_data %>% filter(lightness_mapping=="dark-more"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_rt_dark)
+
+m_rt_light <- lmer(
+  duration ~ label_condition_c*attention_c
+  + (1 + label_condition_c || participant_id),
+  data = rt_data %>% filter(lightness_mapping=="light-more"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_rt_light)
+
+m_rt_high <- lmer(
+  duration ~ lightness_mapping_c*attention_c
+  + (1 + lightness_mapping_c | participant_id),
+  data = rt_data %>% filter(label_condition=="greater-up"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_rt_high)
+
+m_rt_low <- lmer(
+  duration ~ lightness_mapping_c*attention_c
+  + (1 | participant_id),
+  data = rt_data %>% filter(label_condition=="fewer-up"),
+  control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_rt_low)
+
+
+```
+
+Filtering outliers
+```{r}
+heatmap_filtered_woOutliers <- heatmap_filtered %>%
+  filter(!tier3_trial_rt_outlier)
+
+rt_data_woOutliers <- heatmap_filtered_woOutliers %>%
+  filter(correct == 1)
+
+m_acc_pruned <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c
+  + (1 + label_condition_c*lightness_mapping_c || participant_id),
+  data = heatmap_filtered_woOutliers,
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_acc_pruned)
+
+m_rt_pruned <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c*attention_c +
+    (1 + lightness_mapping_c || participant_id),
+  data = rt_data_woOutliers,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned)
+
+m_rt_pruned_single <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c +
+    (1 + lightness_mapping_c || participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="single"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_single)
+
+m_rt_pruned_dual <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c +
+    (1 + lightness_mapping_c || participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="dual"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_dual)
+
+
+m_rt_pruned_dual_dark <- lmer(
+  duration ~ label_condition_c +
+    (1 | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="dual", lightness_mapping=="dark-more"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_dual_dark)
+
+m_rt_pruned_dual_light <- lmer(
+  duration ~ label_condition_c +
+    (1 | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="dual", lightness_mapping=="light-more"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_dual_light)
+
+m_rt_pruned_dual_high <- lmer(
+  duration ~ lightness_mapping_c +
+    (1 + lightness_mapping_c | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="dual", label_condition=="greater-up"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_dual_high)
+
+m_rt_pruned_dual_low <- lmer(
+  duration ~ lightness_mapping_c +
+    (1 | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="dual", label_condition=="fewer-up"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_dual_low)
+
+# Single task
+m_rt_pruned_single_dark <- lmer(
+  duration ~ label_condition_c +
+    (1 + label_condition_c | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="single", lightness_mapping=="dark-more"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_single_dark)
+
+m_rt_pruned_single_light <- lmer(
+  duration ~ label_condition_c +
+    (1 | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="single", lightness_mapping=="light-more"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_single_light)
+
+m_rt_pruned_single_high <- lmer(
+  duration ~ lightness_mapping_c +
+    (1 | participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="single", label_condition=="greater-up"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_single_high)
+
+m_rt_pruned_single_low <- lmer(
+  duration ~ lightness_mapping_c +
+    (1 + lightness_mapping_c || participant_id),
+  data = rt_data_woOutliers %>% filter(attention=="single", label_condition=="fewer-up"),
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_pruned_single_low)
+```
+
+Block effect
+```{r}
+# with unpruned data
+m_acc_block <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c*block_c +
   + (1 + label_condition_c*lightness_mapping_c*block_c | participant_id),
   data = heatmap_filtered,
   family = binomial("logit"),
@@ -41,26 +323,35 @@ m_acc_wBlock <- glmer(
     optCtrl = list(maxfun = 2e5)
     )
 )
+summary(m_acc_block)
 
-summary(m_acc_wBlock)
-
-tab_model(
-  m1_all_blocks,
-  show.ci = FALSE,      # hides confidence intervals
-  show.se = TRUE,       # show standard errors
-  show.stat = TRUE,    # show z (or t) statistic
-  file = "model_table.tex"
-)
-```
-
-Response time with blocks
-```{r}
-m1_all_blocks <- lmer(
+m_rt_block <- lmer(
   duration ~ label_condition_c*lightness_mapping_c*attention_c*block_c +
-    (1 + label_condition_c + lightness_mapping_c + block_c || participant_id),
-  data = heatmap_filtered
-  # control = lmerControl(optimizer = "bobyqa")
+    (1 + lightness_mapping_c*lightness_mapping_c + block_c || participant_id),
+  data = rt_data,
+  control = lmerControl(optimizer = "bobyqa")
 )
+summary(m_rt_block)
 
-summary(m1_all_blocks)
+# with pruned data
+m_acc_outliers_block <- glmer(
+  correct ~ label_condition_c*lightness_mapping_c*attention_c*block_c +
+  + (1 + label_condition_c*lightness_mapping_c*block_c | participant_id),
+  data = heatmap_filtered_woOutliers,
+  family = binomial("logit"),
+  control = glmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+    )
+)
+summary(m_acc_outliers_block)
+
+m_rt_outliers_block <- lmer(
+  duration ~ label_condition_c*lightness_mapping_c*attention_c*block_c +
+    (1 + lightness_mapping_c*lightness_mapping_c*block_c || participant_id),
+  data = rt_data_woOutliers,
+  control = lmerControl(optimizer = "bobyqa")
+)
+summary(m_rt_outliers_block)
+
 ```

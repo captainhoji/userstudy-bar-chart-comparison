@@ -3,6 +3,7 @@ suppressPackageStartupMessages({
   library(readr)
   library(lme4)
   library(simr)
+  library(lmerTest)
 })
 
 project_root <- normalizePath(".", winslash = "/", mustWork = TRUE)
@@ -28,11 +29,11 @@ model_data <- clean_trials %>%
     is_complete,
     !exclude_low_task_accuracy,
     !exclude_low_phone_dprime,
-    !exclude_mean_rt_outlier,
+    # !exclude_mean_rt_outlier,
     is_answered,
     valid_response_time,
     valid_correct,
-    !exclude_within_participant_rt_outlier,
+    # !exclude_within_participant_rt_outlier,
     correct == 1
   ) %>%
   mutate(
@@ -53,9 +54,17 @@ contrasts(model_data$statement_truth) <- contr.sum(2) / 2
 # attention is between-participants, while legend type, statement type,
 # and statement truth vary within participants.
 rt_model <- lmer(
-  response_time ~ attention * legend * statement_type * statement_truth +
-    (1 + legend + statement_type + statement_truth || participant_id),
+  response_time ~ attention * legend * statement_type +
+    (1 | participant_id),
   data = model_data,
+  control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+)
+summary(rt_model)
+
+rt_model <- lmer(
+  response_time ~ attention * legend +
+    (1 | participant_id),
+  data = model_data %>% filter(statement_type == "main_effect"),
   control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
 )
 

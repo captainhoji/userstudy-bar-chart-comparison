@@ -6,7 +6,7 @@ suppressPackageStartupMessages({
 })
 
 project_root <- normalizePath(".", winslash = "/", mustWork = TRUE)
-clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.csv")
+clean_file <- file.path(project_root, "data_clean", "trial_barchart_clean.rds")
 model_dir <- file.path(project_root, "output", "models")
 
 dir.create(model_dir, recursive = TRUE, showWarnings = FALSE)
@@ -15,7 +15,7 @@ if (!file.exists(clean_file)) {
   stop("Run scripts/01_clean_trial_barchart.R first.")
 }
 
-clean_trials <- readr::read_csv(clean_file, show_col_types = FALSE)
+clean_trials <- readRDS(clean_file)
 
 # Keep only analyzable response-time trials for the mixed model.
 model_data <- clean_trials %>%
@@ -28,28 +28,19 @@ model_data <- clean_trials %>%
     valid_response_time
   ) %>%
   mutate(
-    participant_id = factor(participant_id),
-    attention = factor(attention, levels = c("single", "dual")),
-    task = factor(task, levels = c("tallest", "shortest")),
-    color = factor(color, levels = c("same", "double", "random"))
+    participant_id = factor(participant_id)
   )
 
-# Apply centered contrasts so binary predictors use -0.5 / 0.5 coding
-# and the 3-level color factor uses standard sum coding.
-contrasts(model_data$attention) <- contr.sum(2) / 2
-contrasts(model_data$task) <- contr.sum(2) / 2
-contrasts(model_data$color) <- matrix(
-  c(
-    -0.5, -0.5,
-    0.5,  0.0,
-    0.0,  0.5
-  ),
-  ncol = 2,
-  byrow = TRUE,
-  dimnames = list(
-    c("same", "double", "random"),
-    c("dual", "random")
-  )
+# Reapply the saved coding explicitly so the model script is self-documenting.
+contrasts(model_data$color) <- cbind(
+  double_vs_same = c(-0.5, 0.5, 0),
+  random_vs_same = c(-0.5, 0, 0.5)
+)
+contrasts(model_data$task) <- cbind(
+  shortest_vs_highest = c(-0.5, 0.5)
+)
+contrasts(model_data$attention) <- cbind(
+  dual_vs_single = c(-0.5, 0.5)
 )
 
 # Default model:

@@ -19,8 +19,8 @@ if (!file.exists(clean_file) || !file.exists(participant_summary_file)) {
 use_exclude_incomplete_participants <- TRUE
 use_exclude_low_task_accuracy <- TRUE
 use_exclude_low_phone_dprime <- TRUE
-use_exclude_mean_rt_outlier_participants <- FALSE
-use_exclude_mean_rt_outlier_trials <- TRUE
+use_exclude_mean_rt_outlier_participants <- TRUE
+use_exclude_mean_rt_outlier_trials <- FALSE
 manual_exclude_participant_ids <- character(0)
 
 clean_trials <- readr::read_csv(clean_file, show_col_types = FALSE) %>%
@@ -28,6 +28,8 @@ clean_trials <- readr::read_csv(clean_file, show_col_types = FALSE) %>%
     attention = factor(attention, levels = c("single", "dual")),
     legend = factor(legend, levels = c("ordered", "shuffled")),
     statement_type = factor(statement_type, levels = c("main_effect", "interaction")),
+    # comparison_frame = na_if(comparison_frame, "NULL"),
+    # comparison_frame = factor(comparison_frame, levels = c("more", "less")),
     # Readr may infer this column as logical, so recode it explicitly for plotting.
     statement_truth = factor(statement_truth, levels = c(FALSE, TRUE), labels = c("False", "True")),
     response = factor(response, levels = c("left", "right", "none"))
@@ -40,8 +42,7 @@ eligible_participants <- participant_summary %>%
     if (use_exclude_incomplete_participants) is_complete else TRUE,
     if (use_exclude_low_task_accuracy) !exclude_low_task_accuracy else TRUE,
     if (use_exclude_low_phone_dprime) !exclude_low_phone_dprime else TRUE,
-    if (use_exclude_mean_rt_outlier_participants) !exclude_mean_rt_outlier else TRUE,
-    !(participant_id %in% manual_exclude_participant_ids)
+    if (use_exclude_mean_rt_outlier_participants) !exclude_mean_rt_outlier else TRUE
   ) %>%
   pull(participant_id)
 
@@ -170,6 +171,38 @@ p_accuracy_truth <- ggplot(
   ) +
   theme_linechart
 
+# accuracy_by_condition_frame <- analysis_trials %>%
+#   group_by(participant_id, attention, legend, statement_type, comparison_frame) %>%
+#   summarise(accuracy = mean(correct), .groups = "drop") %>%
+#   cousineau_morey_summary(
+#     value_col = "accuracy",
+#     condition_cols = c("attention", "legend", "statement_type", "comparison_frame")
+#   ) %>%
+#   rename(
+#     mean_accuracy = mean_value,
+#     se_accuracy = se_value
+#   )
+# 
+# p_accuracy_frame <- ggplot(
+#   accuracy_by_condition_frame,
+#   aes(x = legend, y = mean_accuracy, fill = legend)
+# ) +
+#   geom_col(width = 0.7, color = "black") +
+#   geom_errorbar(
+#     aes(ymin = mean_accuracy - se_accuracy, ymax = mean_accuracy + se_accuracy),
+#     width = 0.15
+#   ) +
+#   facet_grid(comparison_frame ~ attention + statement_type, labeller = label_both) +
+#   scale_fill_manual(values = condition_palette, drop = FALSE) +
+#   coord_cartesian(ylim = c(0.4, 1)) +
+#   labs(
+#     title = "Accuracy by attention, legend type, statement type, and comparison frame",
+#     x = "Legend type",
+#     y = "Mean participant accuracy",
+#     fill = "Legend"
+#   ) +
+#   theme_linechart
+
 rt_by_condition <- rt_trials %>%
   group_by(participant_id, attention, legend, statement_type) %>%
   summarise(mean_rt_ms = mean(response_time), .groups = "drop") %>%
@@ -236,6 +269,38 @@ p_rt_truth <- ggplot(
   ) +
   theme_linechart
 
+# rt_by_condition_frame <- rt_trials %>%
+#   group_by(participant_id, attention, legend, statement_type, comparison_frame) %>%
+#   summarise(mean_rt_ms = mean(response_time), .groups = "drop") %>%
+#   cousineau_morey_summary(
+#     value_col = "mean_rt_ms",
+#     condition_cols = c("attention", "legend", "statement_type", "comparison_frame")
+#   ) %>%
+#   rename(
+#     mean_rt_ms = mean_value,
+#     se_rt_ms = se_value
+#   )
+# 
+# p_rt_frame <- ggplot(
+#   rt_by_condition_frame,
+#   aes(x = legend, y = mean_rt_ms, fill = legend)
+# ) +
+#   geom_col(width = 0.7, color = "black") +
+#   geom_errorbar(
+#     aes(ymin = mean_rt_ms - se_rt_ms, ymax = mean_rt_ms + se_rt_ms),
+#     width = 0.15
+#   ) +
+#   facet_grid(comparison_frame ~ attention + statement_type, labeller = label_both) +
+#   scale_fill_manual(values = condition_palette, drop = FALSE) +
+#   coord_cartesian(ylim = c(5000, NA)) +
+#   labs(
+#     title = "Response time by attention, legend type, statement type, and comparison frame",
+#     x = "Legend type",
+#     y = "Mean participant response time (ms)",
+#     fill = "Legend"
+#   ) +
+#   theme_linechart
+# 
 ggsave(
   filename = file.path(figure_dir, "accuracy_by_attention_legend_statement_type.png"),
   plot = p_accuracy,
@@ -252,6 +317,14 @@ ggsave(
   dpi = 300
 )
 
+# ggsave(
+#   filename = file.path(figure_dir, "accuracy_by_attention_statement_type_comparison_frame.png"),
+#   plot = p_accuracy_frame,
+#   width = 8,
+#   height = 6.2,
+#   dpi = 300
+# )
+
 ggsave(
   filename = file.path(figure_dir, "rt_by_attention_legend_statement_type.png"),
   plot = p_rt,
@@ -267,5 +340,13 @@ ggsave(
   height = 7.2,
   dpi = 300
 )
+
+# ggsave(
+#   filename = file.path(figure_dir, "rt_by_attention_statement_type_comparison_frame.png"),
+#   plot = p_rt_frame,
+#   width = 8,
+#   height = 6.2,
+#   dpi = 300
+# )
 
 message("Figures written to: ", figure_dir)

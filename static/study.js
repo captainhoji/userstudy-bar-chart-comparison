@@ -24,8 +24,10 @@ let config = {
   practiceSingleTrials: [],
   practiceDualTrials: [],
   practiceTrials: [],
+  practiceSwitchTrials: [],
   realTrials: [],
   trialCounter: 0,
+  pendingRealTrialCounter: null,
   realPhoneTotals: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
   exposureMode: 'self-paced',
   constantExposureMs: 1750,
@@ -97,6 +99,40 @@ function getBlockPhoneStats() {
 
 function cloneTrials(trials) {
   return trials.map((trial) => ({ ...trial }));
+}
+
+function resetRealBlockFeedbackCounters() {
+  // Break feedback should reflect only the block that just finished, not the
+  // cumulative totals across the whole experiment.
+  config.realCorrects = 0;
+  config.realTotal = 0;
+  config.realMisses = 0;
+}
+
+function buildLowTaskAccuracyWarning(accuracy) {
+  if (accuracy === null || accuracy >= 0.75) return '';
+
+  if (config.stimuliMode === 'linechart') {
+    return `
+      <p style="color:#b00020;">
+        Your accuracy on the line-chart task is low. Please focus on whether values are higher at early or late.
+      </p>
+    `;
+  }
+
+  if (config.stimuliMode === 'barchart') {
+    return `
+      <p style="color:#b00020;">
+        Your accuracy on the bar-chart task is low. Please compare both charts carefully and choose the side with the <b>${taskNameFromLetter(config.currentBarPracticeTask || config.taskSequence[0])}</b> bar.
+      </p>
+    `;
+  }
+
+  return `
+    <p style="color:#b00020;">
+      Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side of the colormap that shows greater values</b>.
+    </p>
+  `;
 }
 
 function buildMixedRealTrials(sequence, stimuliMode = 'colormap') {
@@ -172,6 +208,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
   config.skipPractice = !!skipPractice;
   config.stimuliMode = (stimuli === 'linechart' || stimuli === 'barchart') ? stimuli : 'colormap';
   config.taskSequence = normalizeTaskSequence(taskSequenceArg || localStorage.getItem("taskSequence") || "ts");
+  config.currentBarPracticeTask = config.taskSequence[0];
   config.blockSize = config.stimuliMode === 'barchart'
     ? 24
     : (config.stimuliMode === 'linechart' && config.attentionMode !== 'mixed' ? 8 : 20);
@@ -196,6 +233,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
         ? shuffle(await buildBarChartPracticeTrialsRandom(10, config.taskSequence[0]))
         : shuffle(buildPracticeTrialsRandom(10));
     config.practiceTrials = [];
+    config.practiceSwitchTrials = [];
     config.realTrials = await buildMixedRealTrialsAsync(config.attentionSequence, config.stimuliMode);
   } else {
     config.trials = config.stimuliMode === 'linechart'
@@ -209,11 +247,15 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
       : config.stimuliMode === 'barchart'
         ? shuffle(await buildBarChartPracticeTrialsRandom(config.practiceTrialCount, config.taskSequence[0]))
         : shuffle(buildPracticeTrialsRandom(20));
+    config.practiceSwitchTrials = config.stimuliMode === 'barchart' && config.taskSequence[0] !== config.taskSequence[1]
+      ? shuffle(await buildBarChartPracticeTrialsRandom(config.practiceTrialCount, config.taskSequence[1]))
+      : [];
     config.practiceSingleTrials = [];
     config.practiceDualTrials = [];
     config.realTrials = config.trials;
   }
   config.trialCounter = 0;
+  config.pendingRealTrialCounter = null;
 
   const taskName = config.stimuliMode === 'linechart' ? 'line chart' : config.stimuliMode === 'barchart' ? 'bar chart' : 'colormap';
   const firstBarTask = taskNameFromLetter(config.taskSequence[0]);
@@ -227,7 +269,8 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
           : "/static/stimuli/linecharts/example1.jpg",
         title: "Example 1",
         details: config.stimuliMode === 'barchart'
-          ? "The tallest bar is on the <b>right</b><br>The shortest bar is on the <b>right</b>."
+          // Match the generated example image metadata exactly.
+          ? "The tallest bar is on the <b>right</b><br>The shortest bar is on the <b>left</b>."
           : "The statement is <b>true</b>, so press the <b>Right</b> arrow key."
       },
       {
@@ -236,7 +279,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
           : "/static/stimuli/linecharts/example2.jpg",
         title: "Example 2",
         details: config.stimuliMode === 'barchart'
-          ? "The tallest bar is on the <b>left</b><br>The shortest bar is on the <b>left</b>."
+          ? "The tallest bar is on the <b>right</b><br>The shortest bar is on the <b>right</b>."
           : "The statement is <b>false</b>, so press the <b>Left</b> arrow key."
       },
       {
@@ -245,7 +288,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
           : "/static/stimuli/linecharts/example3.jpg",
         title: "Example 3",
         details: config.stimuliMode === 'barchart'
-          ? "The tallest bar is on the <b>left</b><br>The shortest bar is on the <b>right</b>."
+          ? "The tallest bar is on the <b>right</b><br>The shortest bar is on the <b>right</b>."
           : "The statement is <b>true</b>, so press the <b>Right</b> arrow key."
       },
       {
@@ -254,7 +297,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
           : "/static/stimuli/linecharts/example4.jpg",
         title: "Example 4",
         details: config.stimuliMode === 'barchart'
-          ? "The tallest bar is on the <b>right</b><br>The shortest bar is on the <b>left</b>."
+          ? "The tallest bar is on the <b>left</b><br>The shortest bar is on the <b>left</b>."
           : "The statement is <b>false</b>, so press the <b>Left</b> arrow key."
       }
     ]
@@ -469,12 +512,18 @@ function startTrials() {
   config.practiceDualCorrects = 0;
   config.practiceDualTotal = 0;
   config.practiceDualMisses = 0;
+  config.practiceSwitchCorrects = 0;
+  config.practiceSwitchTotal = 0;
+  config.practiceSwitchMisses = 0;
   config.realCorrects = 0;
   config.realTotal = 0;
   config.realMisses = 0;
   config.resolveAttention = (blockName, trialIndex) => {
     if (blockName === 'practice-single') return 'single';
     if (blockName === 'practice-dual') return 'dual';
+    if (blockName === 'practice-switch') {
+      return config.attentionMode === 'single' ? 'single' : 'dual';
+    }
     if (blockName === 'practice') {
       return config.attentionMode === 'single' ? 'single' : 'dual';
     }
@@ -486,6 +535,7 @@ function startTrials() {
     return config.attention;
   };
   phoneTask.resetStats();
+  config.pendingRealTrialCounter = null;
   config.onPhoneScreenReady = () => {
     if (config.currentAttention !== 'dual') return;
     const phoneScreen = getPhoneScreen();
@@ -544,18 +594,7 @@ async function handleNext() {
       await flushResponseQueue({ timeoutMs: 12000 });
       phoneTask.pause();
       const practiceAccuracy = config.practiceSingleTotal === 0 ? null : config.practiceSingleCorrects / config.practiceSingleTotal;
-      const lowColormapWarning = (
-        practiceAccuracy !== null &&
-        practiceAccuracy < 0.75
-      )
-        ? `
-          <p style="color:#b00020;">
-            ${config.stimuliMode === 'linechart'
-          ? 'Your accuracy is low. Please read the line chart carefully and choose whether values are higher early or late.'
-          : 'Your accuracy is low. Please <b>read the legend</b> and select the <b>side that shows greater values</b>.'}
-          </p>
-        `
-        : '';
+      const lowColormapWarning = buildLowTaskAccuracyWarning(practiceAccuracy);
       const betweenPracticeHTML = `
         <p>
           This is the end of single-task practice.<br>
@@ -633,18 +672,7 @@ async function handleNext() {
           </p>
         `
         : '';
-      const lowColormapWarning = (
-        practiceAccuracy !== null &&
-        practiceAccuracy < 0.75
-      )
-        ? `
-          <p style="color:#b00020;">
-            ${config.stimuliMode === 'linechart'
-          ? 'Your accuracy on the line-chart task is low. Please focus on whether values are higher at early or late.'
-          : 'Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side of the colormap that shows greater values</b>.'}
-          </p>
-        `
-        : '';
+      const lowColormapWarning = buildLowTaskAccuracyWarning(practiceAccuracy);
       const transitionHTML = `
         <p>
           This is the end of practice.
@@ -725,18 +753,7 @@ async function handleNext() {
           </p>
         `
         : '';
-      const lowColormapWarning = (
-        practiceAccuracy !== null &&
-        practiceAccuracy < 0.75
-      )
-        ? `
-          <p style="color:#b00020;">
-            ${config.stimuliMode === 'linechart'
-          ? 'Your accuracy on the line-chart task is low. Please focus on whether values are higher at early or late.'
-          : 'Your accuracy on the colormap task is low. Please <b>read the legend</b> and select the <b>side of the colormap that shows greater values</b>.'}
-          </p>
-        `
-        : '';
+      const lowColormapWarning = buildLowTaskAccuracyWarning(practiceAccuracy);
       const transitionHTML = `
         <p>
           ${config.attentionMode !== 'mixed'
@@ -769,6 +786,65 @@ async function handleNext() {
         const firstRealAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
         config.currentAttention = firstRealAttention;
         if (firstRealAttention === 'dual') {
+          phoneTask.setForcePetOnNextMessage(false);
+          phoneTask.start();
+        } else {
+          phoneTask.pause();
+        }
+        loadTrial();
+      });
+    } else if (config.currentBlock === 'practice-switch') {
+      await flushResponseQueue({ timeoutMs: 12000 });
+      if (config.currentAttention === 'dual') phoneTask.pause();
+      const practiceAccuracy = config.practiceSwitchTotal === 0 ? null : config.practiceSwitchCorrects / config.practiceSwitchTotal;
+      const phoneStats = phoneTask.getStats();
+      const practiceAccuracyPhone = config.attentionMode === 'single' ? 1 : phoneStats.accuracy;
+      const noHitWarning = (
+        config.attentionMode !== 'single' &&
+        (phoneStats.hit || 0) === 0 &&
+        (phoneStats.miss || 0) > 0
+      )
+        ? `
+          <p style="color:#b00020;">
+            You did not like any pet-related messages. If you ignore pet-related messages again, your friends will be angry.<br>
+            Please <strong>like pet-related messages by pressing the spacebar</strong>.
+          </p>
+        `
+        : '';
+      const lowColormapWarning = buildLowTaskAccuracyWarning(practiceAccuracy);
+      const practiceLabel = config.stimuliMode === 'barchart' ? 'bar chart' : 'task';
+      const taskLabel = taskNameFromLetter(config.taskSequence[1]);
+      const transitionHTML = `
+        <p>
+          This is the end of practice for the <b>${taskLabel}</b> task.
+        </p>
+        <p>
+          Practice accuracy (${practiceLabel}): <b>${practiceAccuracy !== null ? Math.round(practiceAccuracy * 100) : 0}%</b><br>
+          ${config.attentionMode !== 'single'
+          ? `Practice accuracy (phone): <b>${practiceAccuracyPhone !== null ? Math.round(practiceAccuracyPhone * 100) : 0}%</b><br>`
+          : ''}
+        </p>
+        ${lowColormapWarning}
+        ${noHitWarning}
+        <p>
+          Press Enter to start block 3.
+        </p>
+      `;
+      const sectionTitleEl = document.getElementById("section-title");
+      if (sectionTitleEl) sectionTitleEl.textContent = "Practice Trials";
+      document.getElementById("instruction-text").innerHTML = transitionHTML;
+      showInstructionsOverlay();
+      addSingleKeyHandler('Enter', () => {
+        hideInstructionsOverlay();
+        config.currentBlock = 'real';
+        config.trials = config.realTrials;
+        config.trialCounter = Number(config.pendingRealTrialCounter || 0);
+        config.pendingRealTrialCounter = null;
+        phoneTask.resetStats();
+        resetRealBlockFeedbackCounters();
+        const resumedAttention = config.resolveAttention(config.currentBlock, config.trialCounter);
+        config.currentAttention = resumedAttention;
+        if (resumedAttention === 'dual') {
           phoneTask.setForcePetOnNextMessage(false);
           phoneTask.start();
         } else {
@@ -822,13 +898,28 @@ async function handleNext() {
       config.stimuliMode === 'barchart' &&
       config.currentBlock === 'real' &&
       endedBlockNumber === 2 &&
-      config.taskSequence[0] !== config.taskSequence[1]
+      config.taskSequence[0] !== config.taskSequence[1] &&
+      config.practiceSwitchTrials.length > 0 &&
+      !config.skipPractice
     );
     const nextTaskLabel = taskNameFromLetter(config.taskSequence[1]);
+    // Match the break-screen wording to the active stimulus type.
+    const breakTaskLabel = config.stimuliMode === 'linechart'
+      ? 'line chart'
+      : config.stimuliMode === 'barchart'
+        ? 'bar chart'
+        : 'colormap';
+    const missedLabel = config.stimuliMode === 'linechart'
+      ? 'Missed line charts'
+      : config.stimuliMode === 'barchart'
+        ? 'Missed bar charts'
+        : 'Missed colormaps';
     const accuracyHTML = `
       <p>
-        Accuracy (${config.stimuliMode === 'linechart' ? 'line chart' : 'colormap'}): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
-        Missed ${config.stimuliMode === 'linechart' ? 'line charts' : 'colormaps'}: <b>${config.realMisses || 0}</b><br>
+        Accuracy (${breakTaskLabel}): <b>${heatmapAccuracy !== null ? Math.round(heatmapAccuracy * 100) : 0}%</b><br>
+        ${config.exposureMode === 'constant-time'
+          ? `${missedLabel}: <b>${config.realMisses || 0}</b><br>`
+          : ''}
         ${showPhoneAccuracy
         ? `Accuracy (phone): <b>${phoneAccuracy !== null ? Math.round(phoneAccuracy * 100) : 0}%</b><br>`
         : ''}
@@ -865,10 +956,7 @@ async function handleNext() {
         showInstructionsOverlay();
         addSingleKeyHandler('Enter', () => {
           hideInstructionsOverlay();
-          // Reset block-level counters so break feedback is per block, not cumulative.
-          config.realCorrects = 0;
-          config.realTotal = 0;
-          config.realMisses = 0;
+          resetRealBlockFeedbackCounters();
           config.currentAttention = nextAttention;
           if (nextAttention === 'dual') {
             phoneTask.start();
@@ -901,18 +989,29 @@ async function handleNext() {
               Now please find the <b>${nextTaskLabel}</b> bar instead of the previous task.
             </p>
             <p>
-              Press Enter to continue.
+              You will complete <b>${config.practiceTrialCount} practice trials</b> for the new task before block 3 begins.
+            </p>
+            <p>
+              Press Enter to start practice.
             </p>
           `;
           showInstructionsOverlay();
           addSingleKeyHandler('Enter', () => {
             hideInstructionsOverlay();
-            // Reset block-level counters so break feedback is per block, not cumulative.
-            config.realCorrects = 0;
-            config.realTotal = 0;
-            config.realMisses = 0;
+            // Pause the real timeline, insert practice for the new task, and
+            // resume block 3 from this saved real-trial index afterward.
+            config.pendingRealTrialCounter = config.trialCounter;
+            config.currentBlock = 'practice-switch';
+            config.currentBarPracticeTask = config.taskSequence[1];
+            config.trials = config.practiceSwitchTrials;
+            config.trialCounter = 0;
+            config.practiceSwitchCorrects = 0;
+            config.practiceSwitchTotal = 0;
+            config.practiceSwitchMisses = 0;
             config.currentAttention = nextAttention;
+            phoneTask.resetStats();
             if (nextAttention === 'dual') {
+              phoneTask.setForcePetOnNextMessage(true);
               phoneTask.start();
             } else {
               phoneTask.pause();
@@ -922,10 +1021,7 @@ async function handleNext() {
           return;
         }
         hideInstructionsOverlay();
-        // Reset block-level counters so break feedback is per block, not cumulative.
-        config.realCorrects = 0;
-        config.realTotal = 0;
-        config.realMisses = 0;
+        resetRealBlockFeedbackCounters();
         config.currentAttention = nextAttention;
         if (nextAttention === 'dual') {
           phoneTask.start();

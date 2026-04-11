@@ -14,7 +14,84 @@ eligible_ids <- heatmap %>%
   pull(participant_id)
 
 heatmap_filtered <- heatmap %>%
-  filter(participant_id %in% eligible_ids)
+  filter(participant_id %in% eligible_ids)  # %>%
+  # filter(!tier3_trial_rt_outlier)
+
+# Use one consistent black/white style for lightness-mapping bar charts.
+lightness_fill_scale <- scale_fill_manual(
+  values = c("dark-more" = "gray25", "light-more" = "white")
+)
+
+lightness_bar_geom <- geom_col(
+  width = 0.65,
+  alpha = 1,
+  color = "black",
+  linewidth = 0.4
+)
+
+bar_axis_theme <- theme_classic(base_size = 13) +
+  theme(
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank()
+  )
+
+# Overall RT distribution by attention and trial correctness.
+rt_distribution <- heatmap_filtered %>%
+  filter(!is.na(response_time), response_time > 0, !is.na(correct)) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    trial_type = factor(
+      if_else(correct == 1, "correct", "incorrect"),
+      levels = c("correct", "incorrect")
+    )
+  )
+
+rt_distribution_means <- rt_distribution %>%
+  group_by(attention, trial_type) %>%
+  summarise(mean_response_time = mean(response_time, na.rm = TRUE), .groups = "drop")
+
+p_rt_distribution <- ggplot(rt_distribution, aes(x = response_time, fill = trial_type, color = trial_type)) +
+  geom_density(alpha = 0.25, linewidth = 0.8, adjust = 1.1) +
+  # Mark the mean RT for correct and incorrect trials within each attention panel.
+  geom_vline(
+    data = rt_distribution_means,
+    aes(xintercept = mean_response_time, color = trial_type),
+    linewidth = 0.9,
+    linetype = "dashed",
+    show.legend = FALSE
+  ) +
+  coord_cartesian(xlim = c(0, 5000)) +
+  facet_wrap(~attention, ncol = 1) +
+  labs(
+    x = "Response time (ms)",
+    y = "Density",
+    title = "RT Distribution of Correct and Incorrect Trials by Attention"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
+
+# Matching RT density plot without the correctness split, so the overall shape
+# can be compared across attention conditions directly.
+rt_distribution_all <- heatmap_filtered %>%
+  filter(!is.na(response_time), response_time > 0) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual"))
+  )
+
+p_rt_distribution_all <- ggplot(
+  rt_distribution_all,
+  aes(x = response_time, fill = attention, color = attention)
+) +
+  geom_density(alpha = 0.25, linewidth = 0.8, adjust = 1.1) +
+  coord_cartesian(xlim = c(0, 5000)) +
+  facet_wrap(~attention, ncol = 1) +
+  labs(
+    x = "Response time (ms)",
+    y = "Density",
+    title = "RT Distribution by Attention"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
 
 # Cousineau (with Morey correction) SE for within-subject RT summaries.
 cousineau_rt_summary <- function(df, condition_cols) {
@@ -67,34 +144,6 @@ cousineau_acc_summary <- function(df, condition_cols) {
     )
 }
 
-rt_pid_mom <- heatmap_filtered %>%
-  filter(correct == 1, !is.na(lightness_mapping)) %>%
-  group_by(participant_id, attention, lightness_mapping) %>%
-  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
-
-rt_mom <- cousineau_rt_summary(rt_pid_mom, c("attention", "lightness_mapping")) %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
-    cell = interaction(attention, lightness_mapping, sep = " | ", lex.order = TRUE)
-  )
-
-p_rt_mom <- ggplot(rt_mom, aes(x = cell, y = mean_of_means_rt, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9) +
-  geom_errorbar(
-    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
-    width = 0.18,
-    linewidth = 0.7
-  ) +
-  coord_cartesian(ylim = c(1500, 2500)) +
-  labs(
-    x = "Condition",
-    y = "Mean of participant mean RT (ms)",
-    title = "Correct-Trial RT Mean of Means with SE"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
-
 # Mean-of-means accuracy with SE bars under the same participant exclusions.
 acc_mom <- heatmap_filtered %>%
   filter(!is.na(lightness_mapping)) %>%
@@ -114,47 +163,20 @@ acc_mom <- heatmap_filtered %>%
   )
 
 p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_acc, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9) +
+  lightness_bar_geom +
   geom_errorbar(
     aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
     width = 0.18,
     linewidth = 0.7
   ) +
   coord_cartesian(ylim = c(0.5, 1.0)) +
+  lightness_fill_scale +
   labs(
     x = "Condition",
     y = "Mean of participant mean accuracy",
     title = "Accuracy Mean of Means with SE"
   ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
-
-rt_pid_mom_label <- heatmap_filtered %>%
-  filter(correct == 1, !is.na(label_condition)) %>%
-  group_by(participant_id, attention, label_condition) %>%
-  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
-
-rt_mom_label <- cousineau_rt_summary(rt_pid_mom_label, c("attention", "label_condition")) %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up")),
-    cell = interaction(attention, label_condition, sep = " | ", lex.order = TRUE)
-  )
-
-p_rt_mom_label <- ggplot(rt_mom_label, aes(x = cell, y = mean_of_means_rt, fill = label_condition)) +
-  geom_col(width = 0.65, alpha = 0.9) +
-  geom_errorbar(
-    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
-    width = 0.18,
-    linewidth = 0.7
-  ) +
-  coord_cartesian(ylim = c(1500, 2500)) +
-  labs(
-    x = "Condition",
-    y = "Mean of participant mean RT (ms)",
-    title = "Correct-Trial RT Mean of Means by Attention and Label Condition"
-  ) +
-  theme_minimal(base_size = 13) +
+  bar_axis_theme +
   theme(legend.title = element_blank())
 
 # Mean-of-means accuracy with SE bars by attention x label condition.
@@ -176,7 +198,7 @@ acc_mom_label <- heatmap_filtered %>%
   )
 
 p_acc_mom_label <- ggplot(acc_mom_label, aes(x = cell, y = mean_of_means_acc, fill = label_condition)) +
-  geom_col(width = 0.65, alpha = 0.9) +
+  geom_col(width = 0.65, alpha = 1, color = "black", linewidth = 0.4) +
   geom_errorbar(
     aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
     width = 0.18,
@@ -188,7 +210,7 @@ p_acc_mom_label <- ggplot(acc_mom_label, aes(x = cell, y = mean_of_means_acc, fi
     y = "Mean of participant mean accuracy",
     title = "Accuracy Mean of Means by Attention and Label Condition"
   ) +
-  theme_minimal(base_size = 13) +
+  bar_axis_theme +
   theme(legend.title = element_blank())
 
 rt_pid_threeway <- heatmap_filtered %>%
@@ -205,7 +227,7 @@ rt_threeway <- cousineau_rt_summary(rt_pid_threeway, c("attention", "lightness_m
   )
 
 p_rt_threeway <- ggplot(rt_threeway, aes(x = lightness_mapping, y = mean_of_means_rt, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+  geom_col(width = 0.65, alpha = 1, color = "black", linewidth = 0.4, position = position_dodge(width = 0.7)) +
   geom_errorbar(
     aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
     width = 0.18,
@@ -213,24 +235,63 @@ p_rt_threeway <- ggplot(rt_threeway, aes(x = lightness_mapping, y = mean_of_mean
     position = position_dodge(width = 0.7)
   ) +
   coord_cartesian(ylim = c(1500, 2500)) +
+  lightness_fill_scale +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
     y = "Mean of participant mean RT (ms)",
     title = "RT by Attention, Lightness Mapping, and Label Condition"
   ) +
-  theme_minimal(base_size = 13) +
+  bar_axis_theme +
+  theme(legend.title = element_blank())
+
+# Mirror the three-way RT summary for incorrect trials so we can inspect
+# whether the error-trial timing pattern differs from the correct-trial plot.
+rt_pid_threeway_incorrect <- heatmap_filtered %>%
+  filter(correct == 0, !is.na(lightness_mapping), !is.na(label_condition)) %>%
+  group_by(participant_id, attention, lightness_mapping, label_condition) %>%
+  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
+
+rt_threeway_incorrect <- cousineau_rt_summary(
+  rt_pid_threeway_incorrect,
+  c("attention", "lightness_mapping", "label_condition")
+) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
+    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
+  )
+
+p_rt_threeway_incorrect <- ggplot(
+  rt_threeway_incorrect,
+  aes(x = lightness_mapping, y = mean_of_means_rt, fill = lightness_mapping)
+) +
+  geom_col(width = 0.65, alpha = 1, color = "black", linewidth = 0.4, position = position_dodge(width = 0.7)) +
+  geom_errorbar(
+    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
+    width = 0.18,
+    linewidth = 0.7,
+    position = position_dodge(width = 0.7)
+  ) +
+  lightness_fill_scale +
+  facet_wrap(attention ~ label_condition, ncol = 4) +
+  labs(
+    x = "Lightness mapping",
+    y = "Mean of participant mean RT (ms)",
+    title = "Incorrect-Trial RT by Attention, Lightness Mapping, and Label Condition"
+  ) +
+  bar_axis_theme +
   theme(legend.title = element_blank())
 
 # Three-factor accuracy figure: attention x lightness_mapping x label_condition
 acc_threeway <- heatmap_filtered %>%
   filter(!is.na(lightness_mapping), !is.na(label_condition)) %>%
   group_by(participant_id, attention, lightness_mapping, label_condition) %>%
-  summarise(pid_mean_acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
+  summarise(pid_mean_error = mean(1 - correct, na.rm = TRUE), .groups = "drop") %>%
   group_by(attention, lightness_mapping, label_condition) %>%
   summarise(
-    mean_of_means_acc = mean(pid_mean_acc, na.rm = TRUE),
-    se = sd(pid_mean_acc, na.rm = TRUE) / sqrt(n()),
+    mean_of_means_error = mean(pid_mean_error, na.rm = TRUE),
+    se = sd(pid_mean_error, na.rm = TRUE) / sqrt(n()),
     n_participants = n(),
     .groups = "drop"
   ) %>%
@@ -241,104 +302,29 @@ acc_threeway <- heatmap_filtered %>%
     # mapping_label = interaction(lightness_mapping, label_condition, sep = " | ", lex.order = TRUE)
   )
 
-p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_means_acc, fill = lightness_mapping)) +
-  geom_col(width = 0.65, alpha = 0.9, position = position_dodge(width = 0.7)) +
+p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_means_error, fill = lightness_mapping)) +
+  geom_col(width = 0.65, alpha = 1, color = "black", linewidth = 0.4, position = position_dodge(width = 0.7)) +
   geom_errorbar(
-    aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
+    aes(ymin = mean_of_means_error - se, ymax = mean_of_means_error + se),
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
   ) +
-  coord_cartesian(ylim = c(0.5, 1.0)) +
+  coord_cartesian(ylim = c(0, 0.5)) +
+  lightness_fill_scale +
+  scale_y_continuous(breaks = c(0, 0.25, 0.5)) +
   facet_wrap(attention~label_condition, ncol=4) +
   labs(
     x = "Lightness mapping | Label condition",
-    y = "Mean of participant mean accuracy",
-    title = "Accuracy by Attention, Lightness Mapping, and Label Condition"
+    y = "Mean of participant mean error rate",
+    title = "Error Rate by Attention, Lightness Mapping, and Label Condition"
   ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
-
-rt_by_participant <- heatmap %>%
-  filter(participant_id %in% eligible_ids, correct == 1, !is.na(lightness_mapping)) %>%
-  group_by(participant_id, attention, lightness_mapping) %>%
-  summarise(rt = mean(response_time, na.rm = TRUE), .groups = "drop") %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more"))
+  theme_classic(base_size = 7) +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(color = "black"),
+    panel.grid = element_blank()
   )
-
-p_rt_by_participant <- ggplot(
-  rt_by_participant,
-  aes(
-    x = lightness_mapping,
-    y = rt,
-    color = attention,
-    group = interaction(participant_id, attention)
-  )
-) +
-  geom_line(linewidth = 0.8, alpha = 0.45) +
-  geom_point(size = 1.8, alpha = 0.45) +
-  labs(
-    x = "Lightness mapping",
-    y = "Mean RT (ms) on correct trials",
-    title = "Participant RT Lines by Attention and Lightness Mapping"
-  ) +
-  theme_minimal(base_size = 12)
-
-acc_by_participant_lines <- heatmap %>%
-  filter(participant_id %in% eligible_ids, !is.na(lightness_mapping)) %>%
-  group_by(participant_id, attention, lightness_mapping) %>%
-  summarise(acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more"))
-  )
-
-p_acc_by_participant <- ggplot(
-  acc_by_participant_lines,
-  aes(
-    x = lightness_mapping,
-    y = acc,
-    color = attention,
-    group = interaction(participant_id, attention)
-  )
-) +
-  geom_line(linewidth = 0.8, alpha = 0.45) +
-  geom_point(size = 1.8, alpha = 0.45) +
-  labs(
-    x = "Lightness mapping",
-    y = "Mean accuracy",
-    title = "Participant Accuracy Lines by Attention and Lightness Mapping"
-  ) +
-  theme_minimal(base_size = 12)
-
-acc_by_participant_lines <- heatmap %>%
-  filter(participant_id %in% eligible_ids) %>%
-  group_by(participant_id, attention, label_condition) %>%
-  summarise(acc = mean(correct, na.rm = TRUE), .groups = "drop") %>%
-  mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    label_condition = factor(label_condition, levels = c("greater-up", "fewer-up"))
-  )
-
-p_acc_by_participant_label <- ggplot(
-  acc_by_participant_lines,
-  aes(
-    x = label_condition,
-    y = acc,
-    color = attention,
-    group = interaction(participant_id, attention)
-  )
-) +
-  geom_line(linewidth = 0.8, alpha = 0.45) +
-  geom_point(size = 1.8, alpha = 0.45) +
-  labs(
-    x = "Lightness mapping",
-    y = "Mean accuracy",
-    title = "Participant Accuracy Lines by Attention and Label Condition"
-  ) +
-  theme_minimal(base_size = 12)
 
 # Block-wise figures:
 # block 1: stimuli_number 0-19, block 2: 20-39, block 3: 40-59, block 4: 60-79
@@ -382,83 +368,39 @@ p_acc_block <- ggplot(acc_block, aes(x = block, y = mean_acc, color = condition,
   ) +
   theme_minimal(base_size = 13)
 
-# Collapsed two-bar figures:
-# 1) dark-more + greater-up
-# 2) all other conditions
-two_bar_data <- heatmap_filtered %>%
-  filter(!is.na(lightness_mapping), !is.na(label_condition)) %>%
+# Show the overall answered-trial RT spread with a single long boxplot per
+# attention condition, without breaking the data into smaller cells.
+rt_boxplot_all_trials <- heatmap_filtered %>%
+  filter(!is.na(response_time), response_time > 0) %>%
   mutate(
-    attention = factor(attention, levels = c("single", "dual")),
-    collapsed_condition = dplyr::if_else(
-      lightness_mapping == "dark-more" & label_condition == "greater-up",
-      "dark-more + greater-up",
-      "all other conditions"
-    ),
-    collapsed_condition = factor(
-      collapsed_condition,
-      levels = c("dark-more + greater-up", "all other conditions")
-    )
+    attention = factor(attention, levels = c("single", "dual"))
   )
 
-rt_two_bar_pid <- two_bar_data %>%
-  filter(correct == 1) %>%
-  group_by(participant_id, attention, collapsed_condition) %>%
-  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop")
-
-rt_two_bar <- cousineau_rt_summary(rt_two_bar_pid, c("attention", "collapsed_condition"))
-
-p_rt_two_bar <- ggplot(rt_two_bar, aes(x = collapsed_condition, y = mean_of_means_rt, fill = collapsed_condition)) +
-  geom_col(width = 0.6, alpha = 0.9) +
-  geom_errorbar(
-    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
-    width = 0.18,
-    linewidth = 0.7
-  ) +
+p_rt_boxplot_attention_lightness_label <- ggplot(
+  rt_boxplot_all_trials,
+  aes(y = response_time, fill = attention)
+) +
+  geom_boxplot(width = 0.55, outlier.alpha = 0.2) +
+  coord_cartesian(xlim = c(0, 40000)) +
   labs(
-    x = "Condition",
-    y = "Mean of participant mean RT (ms)",
-    title = "RT: Dark-More + Greater-Up vs All Others (By Attention)"
+    x = "Attention",
+    y = "Response time (ms)",
+    title = "RT Distribution by Attention"
   ) +
-  facet_wrap(~attention, ncol = 2) +
   theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
+  theme(legend.title = element_blank())
 
-acc_two_bar_pid <- two_bar_data %>%
-  group_by(participant_id, attention, collapsed_condition) %>%
-  summarise(pid_mean_acc = mean(correct, na.rm = TRUE), .groups = "drop")
 
-acc_two_bar <- cousineau_acc_summary(acc_two_bar_pid, c("attention", "collapsed_condition"))
-
-p_acc_two_bar <- ggplot(acc_two_bar, aes(x = collapsed_condition, y = mean_of_means_acc, fill = collapsed_condition)) +
-  geom_col(width = 0.6, alpha = 0.9) +
-  geom_errorbar(
-    aes(ymin = mean_of_means_acc - se, ymax = mean_of_means_acc + se),
-    width = 0.18,
-    linewidth = 0.7
-  ) +
-  coord_cartesian(ylim = c(0.5, 1.0)) +
-  labs(
-    x = "Condition",
-    y = "Mean of participant mean accuracy",
-    title = "Accuracy: Dark-More + Greater-Up vs All Others (By Attention)"
-  ) +
-  facet_wrap(~attention, ncol = 2) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "none")
-
-ggsave(cfg$out_fig_rt_mean_of_means_se, p_rt_mom, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dpi = 300)
-ggsave(cfg$out_fig_rt_mean_of_means_se_label, p_rt_mom_label, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_mean_of_means_se_label, p_acc_mom_label, width = 10, height = 5.5, dpi = 300)
+ggsave(cfg$out_fig_rt_distribution_by_attention_correctness, p_rt_distribution, width = 10, height = 5.5, dpi = 300)
+ggsave(cfg$out_fig_rt_distribution_by_attention, p_rt_distribution_all, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_rt_attention_lightness_label, p_rt_threeway, width = 12, height = 6, dpi = 300)
-ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 12, height = 6, dpi = 300)
-ggsave(cfg$out_fig_rt_by_participant_attention_mapping, p_rt_by_participant, width = 14, height = 8, dpi = 300)
-ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, width = 14, height = 8, dpi = 300)
-ggsave(cfg$out_fig_acc_by_participant_label, p_acc_by_participant_label, width = 14, height = 8, dpi = 300)
+ggsave(cfg$out_fig_rt_incorrect_attention_lightness_label, p_rt_threeway_incorrect, width = 12, height = 6, dpi = 300)
+ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 5, height = 3.5, dpi = 300)
 ggsave(cfg$out_fig_rt_by_block_attention_mapping, p_rt_block, width = 10, height = 5.5, dpi = 300)
 ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, height = 5.5, dpi = 300)
-ggsave(here::here("analysis", "output", "figures", "rt_darkmore_greaterup_vs_others.png"), p_rt_two_bar, width = 8, height = 5, dpi = 300)
-ggsave(here::here("analysis", "output", "figures", "accuracy_darkmore_greaterup_vs_others.png"), p_acc_two_bar, width = 8, height = 5, dpi = 300)
+ggsave(cfg$out_fig_rt_boxplot_attention_lightness_label, p_rt_boxplot_attention_lightness_label, width = 10, height = 8, dpi = 300)
 
 message("Saved figures to: ", dirname(cfg$out_fig_accuracy))
 message("RT figures apply inclusion criterion mean accuracy >= ", cfg$rt_min_accuracy, " (50/80).")

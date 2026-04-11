@@ -1,5 +1,51 @@
 suppressPackageStartupMessages(library(here))
-source(here::here("analysis", "exp2", "scripts", "00_setup.R"))
+source(here::here("scripts", "00_setup.R"))
+
+to_pdf_path <- function(path) {
+  # Keep the central config paths, but save figure outputs as PDFs from this
+  # script so the rest of the pipeline does not need to change.
+  sub("\\.png$", ".pdf", path)
+}
+
+# Keep export size consistent across figures so the panels are easier to compare
+# in papers/slides. Heights still vary to fit the layout of each plot.
+fig_width <- 3
+base_font_size <- 7
+
+# Bar charts should use explicit axes and tick marks rather than the default
+# theme_minimal gridlines.
+bar_chart_theme <- function(base_size = base_font_size) {
+  theme_classic(base_size = base_size) +
+    theme(
+      panel.grid = element_blank(),
+      axis.line = element_line(linewidth = 0.4, color = "black"),
+      axis.ticks = element_line(linewidth = 0.4, color = "black"),
+      axis.ticks.length = grid::unit(2, "pt"),
+      strip.background = element_blank(),
+      strip.text = element_text(size = base_size),
+      legend.title = element_blank(),
+      legend.position = "bottom"
+    )
+}
+
+# For bar charts, remove the default scale expansion at the bottom so bars start
+# exactly at the x-axis.
+bar_y_scale <- scale_y_continuous(expand = c(0, 0))
+error_rate_y_scale <- scale_y_continuous(
+  limits = c(0, 0.5),
+  breaks = c(0, 0.25, 0.5),
+  labels = c("0", "25", "50"),
+  expand = c(0, 0)
+)
+miss_rate_y_scale <- scale_y_continuous(
+  limits = c(0, 10),
+  breaks = c(0, 5, 10),
+  expand = c(0, 0)
+)
+rt_seconds_y_scale <- scale_y_continuous(
+  breaks = c(0.5, 1.0, 1.5),
+  expand = c(0, 0)
+)
 
 if (!file.exists(cfg$out_clean_heatmap)) {
   stop("Run 01_clean_trials.R first.")
@@ -20,6 +66,29 @@ accuracy_data <- heatmap %>%
   # filter(!exclude_tier3) %>%
   # filter(!response_time < 600) %>%
   filter(response != "none")
+
+# Overall RT distribution by attention and trial correctness.
+rt_distribution <- accuracy_data %>%
+  filter(!is.na(response_time), response_time > 0, !is.na(correct)) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    trial_type = factor(
+      if_else(correct == 1, "correct", "incorrect"),
+      levels = c("correct", "incorrect")
+    )
+  )
+
+p_rt_distribution <- ggplot(rt_distribution, aes(x = response_time, fill = trial_type, color = trial_type)) +
+  geom_density(alpha = 0.25, linewidth = 0.8, adjust = 1.1) +
+  coord_cartesian(xlim = c(0, 5000)) +
+  facet_wrap(~attention, ncol = 1) +
+  labs(
+    x = "Response time (ms)",
+    y = "Density",
+    title = "RT Distribution of Correct and Incorrect Trials by Attention"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
 
 unanswered_by_lightness_label_pid <- heatmap %>%
   filter(
@@ -112,16 +181,17 @@ p_unanswered_by_lightness_label <- ggplot(
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.75)
-  ) +
+) +
+  miss_rate_y_scale +
   facet_wrap(~attention) +
   labs(
     x = "Label condition",
-    y = "Unanswered trials (%)",
+    y = "Miss rate (%)",
     title = "Percentage of Unanswered Trials by Lightness Mapping and Label",
     fill = "Lightness mapping"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 12)
+  bar_chart_theme()
 
 acc_mom <- accuracy_data %>%
   filter(!is.na(lightness_mapping)) %>%
@@ -140,16 +210,15 @@ p_acc_mom <- ggplot(acc_mom, aes(x = cell, y = mean_of_means_err, fill = lightne
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
     linewidth = 0.7
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   labs(
     x = "Condition",
     y = "Mean of participant mean error rate",
     title = "Error Rate Mean of Means with SE"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  bar_chart_theme()
 
 acc_mom_label <- accuracy_data %>%
   filter(!is.na(label_condition)) %>%
@@ -168,15 +237,14 @@ p_acc_mom_label <- ggplot(acc_mom_label, aes(x = cell, y = mean_of_means_err, fi
     aes(ymin = mean_of_means_err - se, ymax = mean_of_means_err + se),
     width = 0.18,
     linewidth = 0.7
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   labs(
     x = "Condition",
     y = "Mean of participant mean error rate",
     title = "Error Rate Mean of Means by Attention and Label Condition"
   ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  bar_chart_theme()
 
 acc_threeway <- accuracy_data %>%
   filter(!is.na(lightness_mapping), !is.na(label_condition)) %>%
@@ -196,8 +264,8 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   facet_wrap(attention ~ label_condition, ncol = 4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -205,8 +273,7 @@ p_acc_threeway <- ggplot(acc_threeway, aes(x = lightness_mapping, y = mean_of_me
     title = "Error Rate by Attention, Lightness Mapping, and Label Condition"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  bar_chart_theme()
 
 error_data_including_unanswered <- heatmap %>%
   filter(!is.na(attention), !is.na(lightness_mapping), !is.na(label_condition)) %>%
@@ -239,8 +306,8 @@ p_err_threeway_including_unanswered <- ggplot(
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   facet_wrap(attention ~ label_condition, ncol = 4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -248,8 +315,7 @@ p_err_threeway_including_unanswered <- ggplot(
     title = "Error Rate (Incorrect + Unanswered) by Attention, Lightness Mapping, and Label"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  bar_chart_theme()
 
 # Error-rate plot stratified by answer_direction (answered trials only).
 err_fourway_answer_direction <- accuracy_data %>%
@@ -278,8 +344,8 @@ p_err_fourway_answer_direction <- ggplot(
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   facet_grid(attention ~ label_condition) +
   labs(
     x = "Lightness mapping",
@@ -287,7 +353,7 @@ p_err_fourway_answer_direction <- ggplot(
     title = "Error Rate by Attention, Lightness Mapping, Label, and Answer Direction",
     fill = "Answer direction"
   ) +
-  theme_minimal(base_size = 13)
+  bar_chart_theme()
 
 acc_threeway_legend <- accuracy_data %>%
   filter(!is.na(lightness_mapping), !is.na(legend_condition)) %>%
@@ -307,8 +373,8 @@ p_acc_threeway_legend <- ggplot(acc_threeway_legend, aes(x = lightness_mapping, 
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.7)
-  ) +
-  coord_cartesian(ylim = c(0.0, 0.5)) +
+) +
+  error_rate_y_scale +
   facet_wrap(attention ~ legend_condition, ncol = 4) +
   labs(
     x = "Lightness mapping | Label condition",
@@ -316,8 +382,7 @@ p_acc_threeway_legend <- ggplot(acc_threeway_legend, aes(x = lightness_mapping, 
     title = "Error Rate by Attention, Lightness Mapping, and Legend Direction"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 13) +
-  theme(legend.title = element_blank())
+  bar_chart_theme()
 
 acc_by_participant_lines <- accuracy_data %>%
   filter(!is.na(lightness_mapping)) %>%
@@ -405,8 +470,9 @@ rt_answered_threeway <- heatmap %>%
     !is.na(lightness_mapping),
     !is.na(label_condition)
   ) %>%
+  mutate(duration_seconds = duration / 1000) %>%
   group_by(participant_id, attention, lightness_mapping, label_condition) %>%
-  summarise(pid_mean_rt = mean(duration, na.rm = TRUE), .groups = "drop") %>%
+  summarise(pid_mean_rt = mean(duration_seconds, na.rm = TRUE), .groups = "drop") %>%
   group_by(attention, lightness_mapping, label_condition) %>%
   summarise(
     mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
@@ -430,16 +496,66 @@ p_rt_answered_threeway <- ggplot(
     width = 0.18,
     linewidth = 0.7,
     position = position_dodge(width = 0.75)
-  ) +
+) +
+  coord_cartesian(ylim = c(0.5, 1.5)) +
+  rt_seconds_y_scale +
   facet_wrap(~attention, ncol = 2) +
   labs(
     x = "Label condition",
-    y = "Mean RT (answered trials)",
+    y = "Mean RT (s)",
     title = "Answered-Trial RT by Attention, Lightness Mapping, and Label",
     fill = "Lightness mapping"
   ) +
   lightness_fill_scale +
-  theme_minimal(base_size = 12)
+  bar_chart_theme()
+
+rt_incorrect_answered_threeway <- heatmap %>%
+  filter(
+    participant_id %in% eligible_ids,
+    response != "none",
+    correct == 0,
+    !is.na(duration),
+    !is.na(lightness_mapping),
+    !is.na(label_condition)
+  ) %>%
+  mutate(duration_seconds = duration / 1000) %>%
+  group_by(participant_id, attention, lightness_mapping, label_condition) %>%
+  summarise(pid_mean_rt = mean(duration_seconds, na.rm = TRUE), .groups = "drop") %>%
+  group_by(attention, lightness_mapping, label_condition) %>%
+  summarise(
+    mean_of_means_rt = mean(pid_mean_rt, na.rm = TRUE),
+    se = sd(pid_mean_rt, na.rm = TRUE) / sqrt(n()),
+    n_participants = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    attention = factor(attention, levels = c("single", "dual")),
+    lightness_mapping = factor(lightness_mapping, levels = c("dark-more", "light-more")),
+    label_condition = factor(label_condition, levels = c("high-more", "low-more"))
+  )
+
+p_rt_incorrect_answered_threeway <- ggplot(
+  rt_incorrect_answered_threeway,
+  aes(x = label_condition, y = mean_of_means_rt, fill = lightness_mapping)
+) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7, alpha = 0.9, color = "black") +
+  geom_errorbar(
+    aes(ymin = mean_of_means_rt - se, ymax = mean_of_means_rt + se),
+    width = 0.18,
+    linewidth = 0.7,
+    position = position_dodge(width = 0.75)
+) +
+  rt_seconds_y_scale +
+  coord_cartesian(ylim = c(0.5, 1.5)) +
+  facet_wrap(~attention, ncol = 2) +
+  labs(
+    x = "Label condition",
+    y = "Mean RT (s)",
+    title = "Incorrect Answered-Trial RT by Attention, Lightness Mapping, and Label",
+    fill = "Lightness mapping"
+  ) +
+  lightness_fill_scale +
+  bar_chart_theme()
 
 rt_answered_distribution <- heatmap %>%
   filter(
@@ -469,20 +585,22 @@ p_rt_answered_distribution <- ggplot(
   theme_minimal(base_size = 12) +
   theme(legend.position = "none")
 
-ggsave(cfg$out_fig_acc_mean_of_means_se, p_acc_mom, width = 10, height = 5.5, dpi = 300)
-ggsave(cfg$out_fig_acc_mean_of_means_se_label, p_acc_mom_label, width = 10, height = 5.5, dpi = 300)
-ggsave(cfg$out_fig_acc_attention_lightness_label, p_acc_threeway, width = 12, height = 6, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "error_rate_including_unanswered_by_attention_lightness_label.png"), p_err_threeway_including_unanswered, width = 12, height = 6, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "error_rate_by_attention_lightness_label_answer_direction.png"), p_err_fourway_answer_direction, width = 12, height = 6, dpi = 300)
-ggsave(cfg$out_fig_acc_by_participant_attention_mapping, p_acc_by_participant, width = 14, height = 8, dpi = 300)
-ggsave(cfg$out_fig_acc_by_participant_label, p_acc_by_participant_label, width = 14, height = 8, dpi = 300)
-ggsave(cfg$out_fig_acc_by_block_attention_mapping, p_acc_block, width = 10, height = 5.5, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "rt_answered_by_attention_lightness_label.png"), p_rt_answered_threeway, width = 10, height = 5.5, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "rt_answered_distribution_by_lightness_label.png"), p_rt_answered_distribution, width = 10, height = 5.5, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "unanswered_percentage_by_lightness_label.png"), p_unanswered_by_lightness_label, width = 9, height = 5.5, dpi = 300)
-ggsave(here::here("analysis", "exp2", "output", "figures", "accuracy_by_attention_lightness_legend.png"), p_acc_threeway_legend, width = 12, height = 6, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_mean_of_means_se), p_acc_mom, width = fig_width, height = 2.6, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_mean_of_means_se_label), p_acc_mom_label, width = fig_width, height = 2.8, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_attention_lightness_label), p_acc_threeway, width = fig_width, height = 3.2, dpi = 300)
+ggsave(here::here("output", "figures", "error_rate_including_unanswered_by_attention_lightness_label.pdf"), p_err_threeway_including_unanswered, width = fig_width, height = 3.2, dpi = 300)
+ggsave(here::here("output", "figures", "error_rate_by_attention_lightness_label_answer_direction.pdf"), p_err_fourway_answer_direction, width = fig_width, height = 3.5, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_by_participant_attention_mapping), p_acc_by_participant, width = fig_width, height = 4, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_by_participant_label), p_acc_by_participant_label, width = fig_width, height = 4, dpi = 300)
+ggsave(to_pdf_path(cfg$out_fig_acc_by_block_attention_mapping), p_acc_block, width = fig_width, height = 2.8, dpi = 300)
+ggsave(here::here("output", "figures", "rt_answered_by_attention_lightnes0s_label.pdf"), p_rt_answered_threeway, width = fig_width, height = 2.8, dpi = 300)
+ggsave(here::here("output", "figures", "rt_incorrect_answered_by_attention_lightness_label.pdf"), p_rt_incorrect_answered_threeway, width = fig_width, height = 2.8, dpi = 300)
+ggsave(here::here("output", "figures", "rt_answered_distribution_by_lightness_label.pdf"), p_rt_answered_distribution, width = fig_width, height = 2.8, dpi = 300)
+ggsave(here::here("output", "figures", "unanswered_percentage_by_lightness_label.pdf"), p_unanswered_by_lightness_label, width = fig_width, height = 2.8, dpi = 300)
+ggsave(here::here("output", "figures", "accuracy_by_attention_lightness_legend.pdf"), p_acc_threeway_legend, width = fig_width, height = 3.2, dpi = 300)
+ggsave(here::here("output", "figures", "rt_distribution_by_attention_correctness.pdf"), p_rt_distribution, width = fig_width, height = 2.8, dpi = 300)
 
-unanswered_pid_dir <- here::here("analysis", "exp2", "output", "figures", "unanswered_percentage_by_participant")
+unanswered_pid_dir <- here::here("output", "figures", "unanswered_percentage_by_participant")
 dir.create(unanswered_pid_dir, recursive = TRUE, showWarnings = FALSE)
 
 unanswered_by_pid_list <- split(unanswered_by_lightness_label_pid, unanswered_by_lightness_label_pid$participant_id)

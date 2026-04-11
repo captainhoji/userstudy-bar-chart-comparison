@@ -1,45 +1,56 @@
 Model formula:
-response_time ~ task * color + (1 + task * color | participant_id)
+response_time ~ task * color + ((1 | participant_id) + (0 + task | 
+    participant_id) + (0 + color | participant_id))
 
 Model summary:
-Linear mixed model fit by maximum likelihood  ['lmerMod']
-Formula: response_time ~ task * color + (1 + task * color | participant_id)
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: response_time ~ task * color + (1 + task + color || participant_id)
    Data: model_data
+Control: lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e+05))
 
-      AIC       BIC    logLik -2*log(L)  df.resid 
-  14246.0   14379.3   -7095.0   14190.0       836 
+REML criterion at convergence: 34082.2
 
 Scaled residuals: 
     Min      1Q  Median      3Q     Max 
--1.9076 -0.4376 -0.1578  0.2244 15.3943 
+-3.4239 -0.2501 -0.0834  0.1194 20.3261 
 
 Random effects:
- Groups         Name         Variance Std.Dev. Corr                         
- participant_id (Intercept)   47782   218.59                                
-                task1         80885   284.40   -1.00                        
-                color1         5959    77.19   -0.21  0.21                  
-                color2         1489    38.58   -0.99  0.99  0.04            
-                task1:color1  16024   126.59   -0.95  0.95 -0.09  0.99      
-                task1:color2  11581   107.62    1.00 -1.00 -0.19 -0.99 -0.96
- Residual                    772911   879.15                                
-Number of obs: 864, groups:  participant_id, 9
+ Groups           Name         Variance Std.Dev. Corr     
+ participant_id   (Intercept)   251934   501.9            
+ participant_id.1 tasktallest   707670   841.2            
+                  taskshortest  416884   645.7   0.59     
+ participant_id.2 colorsame          0     0.0            
+                  colordouble   216895   465.7    NaN     
+                  colorrandom    60986   247.0    NaN 1.00
+ Residual                      2948068  1717.0            
+Number of obs: 1920, groups:  participant_id, 20
 
 Fixed effects:
-             Estimate Std. Error t value
-(Intercept)  1500.213     78.763  19.047
-task1        -577.153    112.096  -5.149
-color1        -16.265     49.510  -0.329
-color2        -86.175     44.210  -1.949
-task1:color1    1.785     94.536   0.019
-task1:color2  110.507     91.888   1.203
+                                            Estimate Std. Error      df t value
+(Intercept)                                  1804.63     197.70   19.57   9.128
+taskshortest_vs_highest                       563.20     173.41   19.00   3.248
+colordouble_vs_same                           -82.03     150.65   20.05  -0.545
+colorrandom_vs_same                           194.70     110.91 1316.23   1.755
+taskshortest_vs_highest:colordouble_vs_same  -447.84     221.66 1859.61  -2.020
+taskshortest_vs_highest:colorrandom_vs_same   255.18     221.66 1859.61   1.151
+                                            Pr(>|t|)    
+(Intercept)                                 1.73e-08 ***
+taskshortest_vs_highest                      0.00423 ** 
+colordouble_vs_same                          0.59210    
+colorrandom_vs_same                          0.07941 .  
+taskshortest_vs_highest:colordouble_vs_same  0.04349 *  
+taskshortest_vs_highest:colorrandom_vs_same  0.24979    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Correlation of Fixed Effects:
-            (Intr) task1  color1 color2 tsk1:1
-task1       -0.782                            
-color1      -0.103  0.094                     
-color2      -0.265  0.242 -0.402              
-task1:colr1 -0.394  0.360 -0.021  0.129       
-task1:colr2  0.361 -0.330 -0.038 -0.112 -0.579
-optimizer (nloptwrap) convergence code: 0 (OK)
+                          (Intr) tsks__ clrd__ clrr__ tskshrtst_vs_hghst:clrd__
+tskshrtst__               -0.212                                               
+clrdbl_vs_s                0.182  0.000                                        
+clrrndm_vs_                0.010  0.000 -0.342                                 
+tskshrtst_vs_hghst:clrd__  0.000  0.000  0.000  0.000                          
+tskshrtst_vs_hghst:clrr__  0.000  0.000  0.000  0.000 -0.500                   
+optimizer (bobyqa) convergence code: 0 (OK)
 boundary (singular) fit: see help('isSingular')
 

@@ -25,20 +25,19 @@ cfg <- list(
   out_sdt_eligible_participants = here::here("output", "tables", "sdt_eligible_participants.csv"),
   out_descriptives = here::here("output", "tables", "descriptives.csv"),
   out_model_summary = here::here("output", "tables", "model_summary.csv"),
-  out_fig_accuracy = here::here("output", "figures", "accuracy_by_attention.png"),
-  out_fig_rt = here::here("output", "figures", "rt_by_attention.png"),
-  out_fig_rt_correct_by_attention_mapping = here::here("output", "figures", "rt_correct_by_attention_lightness_mapping.png"),
-  out_fig_rt_mean_of_means_se = here::here("output", "figures", "rt_mean_of_means_se.png"),
-  out_fig_acc_mean_of_means_se = here::here("output", "figures", "accuracy_mean_of_means_se.png"),
-  out_fig_rt_mean_of_means_se_label = here::here("output", "figures", "rt_mean_of_means_se_by_label.png"),
-  out_fig_acc_mean_of_means_se_label = here::here("output", "figures", "accuracy_mean_of_means_se_by_label.png"),
-  out_fig_rt_attention_lightness_label = here::here("output", "figures", "rt_by_attention_lightness_label.png"),
-  out_fig_acc_attention_lightness_label = here::here("output", "figures", "accuracy_by_attention_lightness_label.png"),
-  out_fig_rt_by_participant_attention_mapping = here::here("output", "figures", "rt_by_participant_attention_lightness.png"),
-  out_fig_acc_by_participant_attention_mapping = here::here("output", "figures", "accuracy_by_participant_attention_lightness.png"),
-  out_fig_acc_by_participant_label = here::here("output", "figures", "accuracy_by_participant_label_lightness.png"),
-  out_fig_rt_by_block_attention_mapping = here::here("output", "figures", "rt_by_block_attention_lightness.png"),
-  out_fig_acc_by_block_attention_mapping = here::here("output", "figures", "accuracy_by_block_attention_lightness.png")
+  out_fig_accuracy = here::here("output", "figures", "accuracy_by_attention.pdf"),
+  out_fig_rt = here::here("output", "figures", "rt_by_attention.pdf"),
+  out_fig_rt_distribution_by_attention_correctness = here::here("output", "figures", "rt_distribution_by_attention_correctness.pdf"),
+  out_fig_rt_distribution_by_attention = here::here("output", "figures", "rt_distribution_by_attention.pdf"),
+  out_fig_rt_boxplot_attention_lightness_label = here::here("output", "figures", "rt_boxplot_by_attention_lightness_label.pdf"),
+  out_fig_rt_correct_by_attention_mapping = here::here("output", "figures", "rt_correct_by_attention_lightness_mapping.pdf"),
+  out_fig_acc_mean_of_means_se = here::here("output", "figures", "accuracy_mean_of_means_se.pdf"),
+  out_fig_acc_mean_of_means_se_label = here::here("output", "figures", "accuracy_mean_of_means_se_by_label.pdf"),
+  out_fig_rt_attention_lightness_label = here::here("output", "figures", "rt_by_attention_lightness_label.pdf"),
+  out_fig_rt_incorrect_attention_lightness_label = here::here("output", "figures", "rt_incorrect_by_attention_lightness_label.pdf"),
+  out_fig_acc_attention_lightness_label = here::here("output", "figures", "accuracy_by_attention_lightness_label.pdf"),
+  out_fig_rt_by_block_attention_mapping = here::here("output", "figures", "rt_by_block_attention_lightness.pdf"),
+  out_fig_acc_by_block_attention_mapping = here::here("output", "figures", "accuracy_by_block_attention_lightness.pdf")
 )
 
 print("Setup loaded. `cfg` is available in this session.")

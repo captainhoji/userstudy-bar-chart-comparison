@@ -12,6 +12,7 @@ phone_file <- file.path(project_root, "data_raw", "Trial_phone.csv")
 clean_dir <- file.path(project_root, "data_clean")
 table_dir <- file.path(project_root, "output", "tables")
 report_dir <- file.path(project_root, "output", "reports")
+clean_rds_file <- file.path(clean_dir, "trial_barchart_clean.rds")
 
 dir.create(clean_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(table_dir, recursive = TRUE, showWarnings = FALSE)
@@ -23,7 +24,11 @@ if (!file.exists(raw_file)) {
 
 # 95% normal-approximation CI for d-prime.
 sdt_ci_z <- 1.96
-task_accuracy_threshold <- 31.5 / 48
+task_accuracy_threshold <- 60.5 / 96
+
+# Toggle this to decide whether trials slower than 5000 ms should be treated
+# as incorrect for accuracy summaries and low-accuracy exclusion rules.
+penalize_rt_over_5000ms_as_incorrect <- TRUE
 
 # Small helper to calculate standard errors for plotting tables later.
 std_error <- function(x) {
@@ -111,6 +116,12 @@ clean_trials <- raw_trials %>%
     valid_correct = correct %in% c(0, 1),
     stimulus_fields_match = stimulus_color == color & stimulus_task == task,
     is_answered = !is.na(response) & response != "none",
+    rt_over_5s = valid_response_time & response_time > 5000,
+    accuracy_scored = dplyr::case_when(
+      !valid_correct ~ NA_real_,
+      penalize_rt_over_5000ms_as_incorrect & rt_over_5s ~ 0,
+      TRUE ~ as.numeric(correct)
+    ),
     participant_type = if_else(str_detect(participant_id, "^testing"), "test", "study"),
     task = factor(task, levels = c("tallest", "shortest")),
     color = factor(color, levels = c("same", "double", "random")),
@@ -166,7 +177,7 @@ participant_summary <- clean_trials %>%
     first_task = first(task[order(trial_number)]),
     first_color = first(color[order(trial_number)]),
     first_stimulus_order = first(stimulus_order[order(trial_number)]),
-    accuracy = mean(correct[valid_correct], na.rm = TRUE),
+    accuracy = mean(accuracy_scored, na.rm = TRUE),
     mean_rt_ms = mean(response_time[is_answered & valid_response_time], na.rm = TRUE),
     median_rt_ms = median(response_time[is_answered & valid_response_time], na.rm = TRUE),
     first_time = min(time_when, na.rm = TRUE),
@@ -179,7 +190,7 @@ participant_summary <- clean_trials %>%
   left_join(
     clean_trials %>%
       group_by(participant_id, task) %>%
-      summarise(task_accuracy = mean(correct[valid_correct], na.rm = TRUE), .groups = "drop") %>%
+      summarise(task_accuracy = mean(accuracy_scored, na.rm = TRUE), .groups = "drop") %>%
       mutate(task_accuracy = if_else(is.nan(task_accuracy), NA_real_, task_accuracy)) %>%
       tidyr::pivot_wider(
         names_from = task,
@@ -213,12 +224,110 @@ participant_summary <- clean_trials %>%
       dplyr::coalesce(accuracy_shortest < task_accuracy_threshold, FALSE)
   )
 
+# Mark unusually slow or fast participants using their mean RT relative to the
+# overall participant RT distribution.
+overall_mean_rt_ms <- mean(participant_summary$mean_rt_ms, na.rm = TRUE)
+overall_sd_rt_ms <- stats::sd(participant_summary$mean_rt_ms, na.rm = TRUE)
+
+participant_summary <- participant_summary %>%
+  mutate(
+    exclude_mean_rt_participant_2sd = dplyr::if_else(
+      !is.na(mean_rt_ms) & !is.na(overall_sd_rt_ms),
+      mean_rt_ms < (overall_mean_rt_ms - 2 * overall_sd_rt_ms) |
+        mean_rt_ms > (overall_mean_rt_ms + 2 * overall_sd_rt_ms),
+      FALSE
+    )
+  )
+
+# Compute participant-specific RT bounds so each trial can be flagged as an
+# within-participant RT outlier in the saved RDS.
+participant_rt_bounds <- clean_trials %>%
+  filter(is_answered, valid_response_time) %>%
+  group_by(participant_id) %>%
+  summarise(
+    participant_mean_rt_ms = mean(response_time, na.rm = TRUE),
+    participant_sd_rt_ms = stats::sd(response_time, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    participant_rt_lower_2sd = participant_mean_rt_ms - 2 * participant_sd_rt_ms,
+    participant_rt_upper_2sd = participant_mean_rt_ms + 2 * participant_sd_rt_ms
+  )
+
 # Add participant-level completeness back onto every trial for easy filtering.
 clean_trials <- clean_trials %>%
   left_join(
-    participant_summary %>% select(participant_id, is_complete),
+    participant_summary %>%
+      select(
+        participant_id,
+        is_complete,
+        exclude_mean_rt_participant_2sd
+      ),
     by = "participant_id"
+  ) %>%
+  left_join(
+    participant_rt_bounds,
+    by = "participant_id"
+  ) %>%
+  mutate(
+    exclude_rt_trial_2sd_within_participant = dplyr::if_else(
+      is_answered & valid_response_time & !is.na(participant_sd_rt_ms),
+      response_time < participant_rt_lower_2sd |
+        response_time > participant_rt_upper_2sd,
+      FALSE
+    )
+  ) %>%
+  select(
+    -participant_mean_rt_ms,
+    -participant_sd_rt_ms,
+    -participant_rt_lower_2sd,
+    -participant_rt_upper_2sd
   )
+
+# Save factor levels and contrasts directly in the RDS so later scripts can use
+# the cleaned object without redefining the coding each time.
+data <- clean_trials
+data <- data %>%
+  mutate(
+    response = factor(response, levels = c("left", "right", "none")),
+    trial_number = as.integer(trial_number),
+    block = case_when(
+      !is.na(trial_number) & trial_number < 24 ~ "block_1",
+      !is.na(trial_number) & trial_number < 48 ~ "block_2",
+      !is.na(trial_number) & trial_number < 72 ~ "block_3",
+      !is.na(trial_number) ~ "block_4",
+      TRUE ~ NA_character_
+    ),
+    block_half = case_when(
+      block %in% c("block_1", "block_2") ~ "first_2_blocks",
+      block %in% c("block_3", "block_4") ~ "last_2_blocks",
+      TRUE ~ NA_character_
+    ),
+    block_pair = case_when(
+      block %in% c("block_1", "block_3") ~ "blocks_1_and_3",
+      block %in% c("block_2", "block_4") ~ "blocks_2_and_4",
+      TRUE ~ NA_character_
+    )
+  )
+levels(data$color) <- c(
+  "same" = "none",
+  "double" = "redundant",
+  "random" = "conflict"
+)
+data$color <- factor(data$color, levels = c("redundant", "none", "conflict"))
+data$task <- factor(data$task, levels = c("tallest", "shortest"))
+data$attention <- factor(data$attention, levels = c("single", "dual"))
+contrasts(data$color) <- cbind(
+  linear = c(-1, 0, 1),
+  quadratic = c(0.5, -1, 0.5)
+)
+contrasts(data$task) <- cbind(
+  shortest_vs_highest = c(-0.5, 0.5)
+)
+contrasts(data$attention) <- cbind(
+  dual_vs_single = c(-0.5, 0.5)
+)
+clean_trials <- data
 
 condition_summary <- clean_trials %>%
   filter(is_complete, valid_correct, valid_response_time, is_answered) %>%
@@ -226,8 +335,8 @@ condition_summary <- clean_trials %>%
   summarise(
     n_trials = n(),
     n_participants = n_distinct(participant_id),
-    accuracy = mean(correct),
-    accuracy_se = std_error(correct),
+    accuracy = mean(accuracy_scored),
+    accuracy_se = std_error(accuracy_scored),
     mean_rt_ms = mean(response_time),
     rt_se_ms = std_error(response_time),
     .groups = "drop"
@@ -237,12 +346,12 @@ participant_condition_summary <- clean_trials %>%
   filter(is_complete, valid_correct, valid_response_time, is_answered) %>%
   group_by(participant_id, task, color) %>%
   summarise(
-    accuracy = mean(correct),
+    accuracy = mean(accuracy_scored),
     mean_rt_ms = mean(response_time),
     .groups = "drop"
   )
 
-readr::write_csv(clean_trials, file.path(clean_dir, "trial_barchart_clean.csv"))
+saveRDS(clean_trials, clean_rds_file)
 readr::write_csv(participant_summary, file.path(table_dir, "participant_summary.csv"))
 readr::write_csv(condition_summary, file.path(table_dir, "condition_summary.csv"))
 readr::write_csv(
@@ -251,6 +360,6 @@ readr::write_csv(
 )
 readr::write_csv(phone_sdt, file.path(table_dir, "phone_sdt_summary.csv"))
 
-message("Cleaned trial rows written to: ", file.path(clean_dir, "trial_barchart_clean.csv"))
+message("Cleaned trial rows written to: ", clean_rds_file)
 message("Participant summary written to: ", file.path(table_dir, "participant_summary.csv"))
 message("Condition summary written to: ", file.path(table_dir, "condition_summary.csv"))

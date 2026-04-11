@@ -1,7 +1,7 @@
 term,estimate
-(Intercept),1500.2129629629758
-task1,-577.1527777777941
-color1,-16.26504629629732
-color2,-86.1747685185206
-task1:color1,1.784722222215399
-task1:color2,110.50694444445058
+(Intercept),1804.6317708333513
+taskshortest_vs_highest,563.2031250000034
+colordouble_vs_same,-82.02916666666846
+colorrandom_vs_same,194.6989583333333
+taskshortest_vs_highest:colordouble_vs_same,-447.83750000000003
+taskshortest_vs_highest:colorrandom_vs_same,255.18124999999998

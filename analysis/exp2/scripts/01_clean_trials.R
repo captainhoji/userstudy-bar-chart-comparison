@@ -1,5 +1,5 @@
 suppressPackageStartupMessages(library(here))
-source(here::here("analysis", "exp2", "scripts", "00_setup.R"))
+source(here::here("scripts", "00_setup.R"))
 
 if (!file.exists(cfg$raw_trial_heatmap)) {
   stop("Missing raw file: ", cfg$raw_trial_heatmap)

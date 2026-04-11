@@ -77,21 +77,36 @@ function toBarChartTrial(row, rowIndex, taskType, groupTag = 'a') {
   };
 }
 
+function groupRowsByDataset(rows) {
+  const byDataset = new Map();
+  rows.forEach((row) => {
+    const datasetIndex = Number(row.dataset_index);
+    if (!byDataset.has(datasetIndex)) {
+      byDataset.set(datasetIndex, []);
+    }
+    byDataset.get(datasetIndex).push(row);
+  });
+  return byDataset;
+}
+
+function chooseColorRowsForHalf(datasetRows, colorsInOrder) {
+  // Pick exactly one color-rendered image for each underlying dataset.
+  return datasetRows.map((variants, idx) => {
+    const wantedColor = colorsInOrder[idx];
+    return variants.find((row) => row.color_condition === wantedColor) || variants[0];
+  });
+}
+
 function buildHalfTrials(rows, taskLetter, groupTag) {
   const taskType = taskFromLetter(taskLetter);
   // Keep order deterministic after the half-split so each half remains exactly 48.
   return rows.map((row, idx) => toBarChartTrial(row, idx, taskType, groupTag));
 }
 
-export async function buildBarChartTrials(taskSequence = 'ts') {
-  const rows = await loadBarChartRows();
-  const code = normalizeTaskSequence(taskSequence);
-
-  // Real pool has exactly 96 image rows (32 datasets x 3 colors).
-  // We split into two homogeneous-task halves (48/48), *stratified* by
-  // (tallest_side x shortest_side x color_condition) so each half has the
-  // same condition composition (4 items per cell).
-  const realRows = rows.filter((row) => (row.pool || 'real') === 'real');
+function buildLegacyRepeatedTrials(realRows, code) {
+  // Fallback for the currently checked-in 32-dataset CSV, where each dataset
+  // already appears once per color. This keeps the task runnable until the
+  // 96-dataset asset pool is regenerated.
   const byCondition = new Map();
   realRows.forEach((row) => {
     const key = `${row.tallest_side}|${row.shortest_side}|${row.color_condition}`;
@@ -107,19 +122,90 @@ export async function buildBarChartTrials(taskSequence = 'ts') {
     secondHalfRows.push(...shuffledCell.slice(4, 8));
   });
 
-  // Shuffle within each half only, to preserve the 48/48 task partition.
-  const firstHalfShuffled = shuffleArray(firstHalfRows);
-  const secondHalfShuffled = shuffleArray(secondHalfRows);
+  return buildHalfTrials(shuffleArray(firstHalfRows), code[0], 'first')
+    .concat(buildHalfTrials(shuffleArray(secondHalfRows), code[1], 'second'));
+}
 
-  const firstHalf = buildHalfTrials(firstHalfShuffled, code[0], 'first');
-  const secondHalf = buildHalfTrials(secondHalfShuffled, code[1], 'second');
+export async function buildBarChartTrials(taskSequence = 'ts') {
+  const rows = await loadBarChartRows();
+  const code = normalizeTaskSequence(taskSequence);
+
+  // Real pool has 96 underlying datasets. Each dataset has 3 image variants
+  // (same/double/random). We split the 96 datasets into two 48-dataset halves,
+  // then assign colors within each half so each task gets:
+  // - 16 same
+  // - 16 double
+  // - 16 random
+  // and, within each color, 4 of each tallest_side x shortest_side combo.
+  const realRows = rows.filter((row) => (row.pool || 'real') === 'real');
+  const byDataset = groupRowsByDataset(realRows);
+  if (byDataset.size < 96) {
+    return buildLegacyRepeatedTrials(realRows, code);
+  }
+  const datasetsBySideCombo = new Map();
+  byDataset.forEach((variants, datasetIndex) => {
+    const exemplar = variants[0];
+    const key = `${exemplar.tallest_side}|${exemplar.shortest_side}`;
+    if (!datasetsBySideCombo.has(key)) {
+      datasetsBySideCombo.set(key, []);
+    }
+    datasetsBySideCombo.get(key).push({ datasetIndex, variants });
+  });
+
+  const firstHalfDatasets = [];
+  const secondHalfDatasets = [];
+  datasetsBySideCombo.forEach((datasetEntries) => {
+    const shuffledEntries = shuffleArray(datasetEntries);
+    // 24 datasets per side combo -> 12 per task half.
+    firstHalfDatasets.push(...shuffledEntries.slice(0, 12));
+    secondHalfDatasets.push(...shuffledEntries.slice(12, 24));
+  });
+
+  function assignBalancedColors(halfDatasets) {
+    const selectedRows = [];
+    const sideComboBuckets = new Map();
+    halfDatasets.forEach((entry) => {
+      const exemplar = entry.variants[0];
+      const key = `${exemplar.tallest_side}|${exemplar.shortest_side}`;
+      if (!sideComboBuckets.has(key)) {
+        sideComboBuckets.set(key, []);
+      }
+      sideComboBuckets.get(key).push(entry.variants);
+    });
+
+    sideComboBuckets.forEach((variantsList) => {
+      const shuffledVariants = shuffleArray(variantsList);
+      // 12 datasets per side combo -> 4 same, 4 double, 4 random.
+      const colorAssignments = [
+        ...Array(4).fill('same'),
+        ...Array(4).fill('double'),
+        ...Array(4).fill('random'),
+      ];
+      const shuffledColors = shuffleArray(colorAssignments);
+      selectedRows.push(...chooseColorRowsForHalf(shuffledVariants, shuffledColors));
+    });
+
+    return shuffleArray(selectedRows);
+  }
+
+  const firstHalfRows = assignBalancedColors(firstHalfDatasets);
+  const secondHalfRows = assignBalancedColors(secondHalfDatasets);
+
+  const firstHalf = buildHalfTrials(firstHalfRows, code[0], 'first');
+  const secondHalf = buildHalfTrials(secondHalfRows, code[1], 'second');
   return firstHalf.concat(secondHalf);
 }
 
 export async function buildBarChartPracticeTrialsRandom(count = 20, taskLetter = 't') {
   const rows = await loadBarChartRows();
   const practiceRows = rows.filter((row) => (row.pool || 'real') === 'practice');
-  const sampledRows = shuffleArray(practiceRows).slice(0, Math.min(count, practiceRows.length));
+  const practiceDatasets = Array.from(groupRowsByDataset(practiceRows).values());
+  const sampledDatasets = shuffleArray(practiceDatasets).slice(0, Math.min(count, practiceDatasets.length));
+  // Practice uses one randomly chosen color version per underlying dataset.
+  const sampledRows = sampledDatasets.map((variants) => {
+    const shuffledVariants = shuffleArray(variants);
+    return shuffledVariants[0];
+  });
   const taskType = taskFromLetter(taskLetter);
   return sampledRows.map((row, idx) => toBarChartTrial(row, idx, taskType));
 }
