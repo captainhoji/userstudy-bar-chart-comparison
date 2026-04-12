@@ -265,7 +265,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
       {
         // Use practice-pool stimuli for instruction examples.
         src: config.stimuliMode === 'barchart'
-          ? "/static/stimuli/barcharts/barchart_20_same.png"
+          ? "/static/stimuli/barcharts/barchart_20_light-more.png"
           : "/static/stimuli/linecharts/example1.jpg",
         title: "Example 1",
         details: config.stimuliMode === 'barchart'
@@ -275,7 +275,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
       },
       {
         src: config.stimuliMode === 'barchart'
-          ? "/static/stimuli/barcharts/barchart_21_double.png"
+          ? "/static/stimuli/barcharts/barchart_21_dark-more.png"
           : "/static/stimuli/linecharts/example2.jpg",
         title: "Example 2",
         details: config.stimuliMode === 'barchart'
@@ -293,7 +293,7 @@ export async function initializeStudy(participantId, attention, exposureMode, sk
       },
       {
         src: config.stimuliMode === 'barchart'
-          ? "/static/stimuli/barcharts/barchart_34_same.png"
+          ? "/static/stimuli/barcharts/barchart_34_light-more.png"
           : "/static/stimuli/linecharts/example4.jpg",
         title: "Example 4",
         details: config.stimuliMode === 'barchart'

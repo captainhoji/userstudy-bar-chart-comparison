@@ -52,7 +52,7 @@ function normalizeTaskSequence(raw) {
 function toBarChartTrial(row, rowIndex, taskType, groupTag = 'a') {
   const datasetIndex = Number(row.dataset_index);
   const idSuffix = Number.isFinite(datasetIndex) ? `${String(datasetIndex).padStart(2, '0')}` : String(rowIndex);
-  const colorCondition = row.color_condition || 'same';
+  const colorCondition = row.color_condition || 'dark-more';
   const tallestSide = row.tallest_side || 'left';
   const shortestSide = row.shortest_side || 'left';
   const correctSide = taskType === 'tallest' ? tallestSide : shortestSide;
@@ -104,9 +104,8 @@ function buildHalfTrials(rows, taskLetter, groupTag) {
 }
 
 function buildLegacyRepeatedTrials(realRows, code) {
-  // Fallback for the currently checked-in 32-dataset CSV, where each dataset
-  // already appears once per color. This keeps the task runnable until the
-  // 96-dataset asset pool is regenerated.
+  // Fallback for older CSVs where each dataset already appears once per color.
+  // This keeps the task runnable if an older asset pool is still on disk.
   const byCondition = new Map();
   realRows.forEach((row) => {
     const key = `${row.tallest_side}|${row.shortest_side}|${row.color_condition}`;
@@ -131,10 +130,10 @@ export async function buildBarChartTrials(taskSequence = 'ts') {
   const code = normalizeTaskSequence(taskSequence);
 
   // Real pool has 96 underlying datasets. Each dataset has 3 image variants
-  // (same/double/random). We split the 96 datasets into two 48-dataset halves,
+  // (dark-more/light-more/random). We split the 96 datasets into two 48-dataset halves,
   // then assign colors within each half so each task gets:
-  // - 16 same
-  // - 16 double
+  // - 16 dark-more
+  // - 16 light-more
   // - 16 random
   // and, within each color, 4 of each tallest_side x shortest_side combo.
   const realRows = rows.filter((row) => (row.pool || 'real') === 'real');
@@ -175,10 +174,10 @@ export async function buildBarChartTrials(taskSequence = 'ts') {
 
     sideComboBuckets.forEach((variantsList) => {
       const shuffledVariants = shuffleArray(variantsList);
-      // 12 datasets per side combo -> 4 same, 4 double, 4 random.
+      // 12 datasets per side combo -> 4 dark-more, 4 light-more, 4 random.
       const colorAssignments = [
-        ...Array(4).fill('same'),
-        ...Array(4).fill('double'),
+        ...Array(4).fill('dark-more'),
+        ...Array(4).fill('light-more'),
         ...Array(4).fill('random'),
       ];
       const shuffledColors = shuffleArray(colorAssignments);

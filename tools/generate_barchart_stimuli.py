@@ -5,8 +5,8 @@ Generate side-by-side bar-chart stimuli and trial metadata for bar-chart mode.
 Design summary:
 - Each dataset is a pair of charts (left/right), 10 bars each, y in [0, 100].
 - Three color conditions:
-  1) same-color
-  2) double-encoding (smaller -> lighter, larger -> darker)
+  1) dark-more (smaller -> lighter, larger -> darker)
+  2) light-more (smaller -> darker, larger -> lighter)
   3) random colors (lightest/darkest do not align with min/max bars)
 - Task assignment (tallest vs shortest) is done in the frontend by block;
   this CSV stores only stimulus/image-level metadata.
@@ -34,7 +34,6 @@ N_PRACTICE_DATASETS = 12
 
 LIGHT_HEX = "#deebf7"
 DARK_HEX = "#08306b"
-SAME_HEX = "#6baed6"
 
 
 def lerp_color(hex_a: str, hex_b: str, t: float) -> str:
@@ -49,16 +48,23 @@ def lerp_color(hex_a: str, hex_b: str, t: float) -> str:
     return to_hex(rgb)
 
 
-def rank_color_map(values: list[int]) -> list[str]:
-    """Map values to gradient colors (small->light, large->dark)."""
+def rank_color_map(values: list[int], reverse: bool = False) -> list[str]:
+    """Map values to gradient colors.
+
+    By default, smaller values are lighter and larger values are darker.
+    When reverse=True, the mapping is flipped so larger values are lighter.
+    """
     uniq = sorted(set(values))
     if len(uniq) == 1:
-        return [SAME_HEX for _ in values]
+        midpoint = lerp_color(LIGHT_HEX, DARK_HEX, 0.5)
+        return [midpoint for _ in values]
     idx_by_val = {v: i for i, v in enumerate(uniq)}
     n = len(uniq) - 1
     colors = []
     for v in values:
         t = idx_by_val[v] / n
+        if reverse:
+            t = 1 - t
         colors.append(lerp_color(LIGHT_HEX, DARK_HEX, t))
     return colors
 
@@ -155,7 +161,7 @@ def make_random_colors(values: list[int]) -> list[str]:
     either endpoint lightness. This avoids a misleading "darkest == tallest"
     or "lightest == shortest" cue in the random condition.
     """
-    # Start from value-derived gradient, then permute assignments.
+    # Start from the shared blue gradient, then permute assignments.
     base_colors = rank_color_map(values)
     min_idx = values.index(min(values))
     max_idx = values.index(max(values))
@@ -197,12 +203,12 @@ def draw_pair_image(out_path: Path, left_vals: list[int], right_vals: list[int],
     fig, axes = plt.subplots(1, 2, figsize=(8.0, 4.6), dpi=140)
     x = list(range(10))
 
-    if color_condition == "same":
-        left_colors = [SAME_HEX] * 10
-        right_colors = [SAME_HEX] * 10
-    elif color_condition == "double":
+    if color_condition == "dark-more":
         left_colors = rank_color_map(left_vals)
         right_colors = rank_color_map(right_vals)
+    elif color_condition == "light-more":
+        left_colors = rank_color_map(left_vals, reverse=True)
+        right_colors = rank_color_map(right_vals, reverse=True)
     else:
         left_colors = make_random_colors(left_vals)
         right_colors = make_random_colors(right_vals)
@@ -230,7 +236,8 @@ def balanced_side_combos(n: int) -> list[tuple[str, str]]:
     We balance:
       - side of tallest bar (left/right)
       - side of shortest bar (left/right)
-    In double-encoding condition, shortest side also corresponds to lightest side.
+    In dark-more condition, the shortest side also corresponds to the lightest side.
+    In light-more condition, the tallest side corresponds to the lightest side.
     """
     combos = [("left", "left"), ("left", "right"), ("right", "left"), ("right", "right")]
     reps = n // 4
@@ -259,9 +266,11 @@ def main() -> None:
 
         left_vals, right_vals = generate_dataset(tallest_side, shortest_side)
 
-        for color_condition in ("same", "double", "random"):
+        for color_condition in ("dark-more", "light-more", "random"):
             filename = f"barchart_{dataset_idx:02d}_{color_condition}.png"
             draw_pair_image(OUT_DIR / filename, left_vals, right_vals, color_condition)
+
+            lightest_side = shortest_side if color_condition == "dark-more" else tallest_side if color_condition == "light-more" else ""
 
             rows.append({
                 "pool": pool,
@@ -270,7 +279,7 @@ def main() -> None:
                 "color_condition": color_condition,
                 "tallest_side": tallest_side,
                 "shortest_side": shortest_side,
-                "lightest_side": shortest_side,
+                "lightest_side": lightest_side,
             })
 
     with TRIALS_CSV.open("w", newline="", encoding="utf-8") as f:
